@@ -120,12 +120,11 @@
 
   /* dock: morphs between modes */
   .tabs { position:absolute; z-index:6; left:calc((100% - var(--rail) - 24px) / 2); top:24px; transform:translateX(-50%); display:flex; gap:6px; padding:6px; background:rgba(12,12,13,.82); border:1px solid var(--star-line); border-radius:999px; }
-  .tab { height:52px; min-width:52px; padding:0 15px; border:0; border-radius:999px; background:rgba(245,248,248,.07); color:var(--star-dim); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .45s var(--ease), color .45s var(--ease), padding .55s var(--ease), transform .25s var(--spring); }
+  .tab { height:52px; min-width:52px; padding:0 18px 0 15px; border:0; border-radius:999px; background:rgba(245,248,248,.07); color:var(--star-dim); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .45s var(--ease), color .45s var(--ease), padding .55s var(--ease), transform .25s var(--spring); }
   .tab svg { width:22px; height:22px; flex:0 0 22px; }
-  .tab .lbl { max-width:0; overflow:hidden; white-space:nowrap; font-size:calc(17px * var(--t)); font-weight:500; transition:max-width .55s var(--ease), margin .55s var(--ease); }
+  .tab .lbl { margin-left:8px; white-space:nowrap; font-size:calc(17px * var(--t)); font-weight:500; }
   .tab:hover:not(:disabled) { color:var(--star); }
-  .tab[aria-current="page"] { background:var(--accent); color:var(--on-accent); padding:0 20px 0 16px; }
-  .tab[aria-current="page"] .lbl { max-width:150px; margin-left:9px; }
+  .tab[aria-current="page"] { background:var(--accent); color:var(--on-accent); }
   .tab:active { transform:scale(.93); }
   .tab:disabled { opacity:.35; cursor:not-allowed; }
 
@@ -227,6 +226,7 @@
     .readout { position:static; max-width:none; background:var(--frame); }
     .rail { position:static; width:auto; overflow:visible; padding:0; }
     .tabs { position:fixed; left:50%; top:auto; bottom:calc(12px + var(--safe-b)); }
+    .tab { padding:0 14px 0 12px; } .tab .lbl { margin-left:6px; }
     #alert { left:12px; right:12px; top:calc(12px + var(--safe-t)); }
   }
   @media (max-width:520px) { .prefs #themeBtn { display:none; } }
@@ -301,17 +301,16 @@
     <span id="camStatus" class="sr"></span>
   </div>
 
-  <section class="rail panel" id="panel" data-tab="watch" tabindex="-1" aria-label="Steps">
+  <section class="rail panel" id="panel" data-tab="teach" tabindex="-1" aria-label="Steps">
     <div class="card">
       <div class="view" data-view="teach" hidden>
         <h2>Teach the steps</h2>
-        <p class="lede" id="teachStatus">Do the procedure once in front of the camera. Tap the camera to start, and again when you finish. Gemini 4 Neon turns it into steps.</p>
+        <p class="lede" id="teachStatus">Do the task once. Tap the camera to start and stop.</p>
         <ul class="tips">
-          <li><span class="sq"></span>Keep the whole workspace in view.</li>
-          <li><span class="sq"></span>One step at a time, with a short pause between.</li>
-          <li><span class="sq"></span>Finish each step clearly.</li>
-          <li><span class="sq"></span>Most procedures take 20 to 40 seconds.</li>
+          <li><span class="sq"></span>Keep everything in view</li>
+          <li><span class="sq"></span>One step at a time</li>
         </ul>
+        <div class="row" style="margin:0 0 12px"><button class="btn" id="toWatch">Next: watch someone</button></div>
         <p class="hint">Steps it learned. Tap a name to rename it.</p>
       </div>
       <div class="view" data-view="watch">
@@ -1407,6 +1406,7 @@ $("themeBtn").onclick = () => {
 };
 showThemePref();
 addEventListener("themechange", () => { try { Sky.recolor(); } catch (_) {} });
+$("toWatch").onclick = () => setTab("watch");
 $("trackBtn").onclick = () => {
   const v = $("trackBtn").getAttribute("aria-pressed") !== "true";
   $("trackBtn").setAttribute("aria-pressed", String(v));
@@ -1422,7 +1422,7 @@ Sky.start();
 try { if (localStorage.getItem("showonce-calm") === "1") setCalm(true); } catch (_) {}
 loadSteps();
 updateCardUI();
-setTab("watch");
+setTab("teach");
 initCamera();
 </script>
 </body>

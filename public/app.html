@@ -21,229 +21,228 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
 <style>
   :root {
-    --night:#0F0F10; --star:#F5F8F8; --star-dim:rgba(245,248,248,.62); --star-line:rgba(245,248,248,.14);
-    --paper:#FFFFFF; --linen:#F5F5F4; --ink:#1B1F1E; --graphite:#555A58; --muted:#686D6B; --rule:#DCDEDC;
-    --pine:#2E6B4F; --oxblood:#6D1F2E;
+    --star:#F5F8F8; --star-dim:rgba(245,248,248,.68); --star-line:rgba(245,248,248,.18);
+    --paper:#FFFFFF; --linen:#F3F3EE; --ink:#1B1F1E; --graphite:#555A58; --muted:#686D6B; --rule:#DCDEDC;
+    --pine:#2E6B4F; --oxblood:#6D1F2E; --burgundy:#6D1F2E; --olive:#6B6F3A; --rose:#E8B4BC; --sage:#C9CD8F;
     --ground:#0F0F10; --accent:#6AF3D9; --on-accent:#0C0F0F; --sky:245,248,248; --sky-a:1;
-    --frame:#050505; --bar:rgba(22,22,24,.92); --warn:#FFD27A; --panel-bg:#FFFFFF;
+    --frame:#050505; --warn:#FFD27A; --card:rgba(255,255,255,.96); --chip:rgba(255,255,255,.93); --hud:rgba(12,12,13,.68);
     --ease:cubic-bezier(.16,1,.3,1); --spring:cubic-bezier(.34,1.56,.64,1);
-    --side:200px; --panel:440px; --t:1;
+    --rail:min(410px, 34vw); --t:1;
     --safe-b:env(safe-area-inset-bottom, 0px); --safe-t:env(safe-area-inset-top, 0px);
   }
-  * { box-sizing:border-box; }
-  html, body { margin:0; overflow-x:clip; }
-  body { background:var(--ground); transition:background-color .7s var(--ease); color:var(--ink); font:calc(18px * var(--t))/1.5 Geist, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums; }
-  button, input, select, textarea { font:inherit; color:inherit; }
-  :focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-  .panel :focus-visible { outline-color:var(--ink); }
+  @view-transition { navigation:auto; }
   body.big { --t:1.2; }
   /* Teach is olive, Watch is burgundy, Save stays neutral. */
-  html[data-theme="dark"] body[data-tab="teach"] { --ground:#17190F; --accent:#C9CD8F; --on-accent:#1A1C10; --panel-bg:#F7F7F0; }
-  html[data-theme="dark"] body[data-tab="watch"] { --ground:#1B0E13; --accent:#E8B4BC; --on-accent:#2A0F16; --panel-bg:#FCF8F8; }
-  html[data-theme="light"] body { --ground:#ECEEEC; --star:#1B1F1E; --star-dim:rgba(27,31,30,.68); --star-line:rgba(27,31,30,.16);
-    --accent:#1B1F1E; --on-accent:#FFFFFF; --sky:27,31,30; --sky-a:.42; --frame:#1B1F1E; --bar:rgba(255,255,255,.94); --warn:#7A4E00; }
-  html[data-theme="light"] body[data-tab="teach"] { --ground:#E7E9D8; --accent:#5A5F2E; --panel-bg:#FBFBF6; }
-  html[data-theme="light"] body[data-tab="watch"] { --ground:#F2E4E7; --accent:#6D1F2E; --panel-bg:#FFFBFB; }
-  .skip { position:absolute; left:12px; top:-60px; z-index:50; background:var(--accent); color:var(--on-accent); padding:12px 16px; border-radius:8px; font-weight:500; text-decoration:none; }
-  .skip:focus { top:12px; }
+  html[data-theme="dark"] body[data-tab="teach"] { --ground:#17190F; --accent:#C9CD8F; --on-accent:#1A1C10; --hud:rgba(23,25,15,.74); }
+  html[data-theme="dark"] body[data-tab="watch"] { --ground:#1B0E13; --accent:#E8B4BC; --on-accent:#2A0F16; --hud:rgba(27,14,19,.74); }
+  html[data-theme="light"] body { --ground:#ECEEEC; --sky:27,31,30; --sky-a:.42; --frame:#1B1F1E; --accent:#1B1F1E; --on-accent:#FFFFFF; }
+  html[data-theme="light"] body[data-tab="teach"] { --ground:#E7E9D8; --accent:#5A5F2E; --hud:rgba(40,43,22,.74); }
+  html[data-theme="light"] body[data-tab="watch"] { --ground:#F2E4E7; --accent:#6D1F2E; --hud:rgba(60,18,28,.74); }
+
+  * { box-sizing:border-box; }
+  html, body { margin:0; overflow-x:clip; }
+  body { background:var(--ground); transition:background-color .7s var(--ease); color:var(--ink); font:calc(17px * var(--t))/1.45 Geist, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums; }
+  button, input, select, textarea { font:inherit; color:inherit; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .rail :focus-visible { outline-color:var(--ink); }
   .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-
-  canvas#sky { position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
-  .app { position:relative; z-index:1; min-height:100dvh; }
-
-  /* ---------- top bar / sidebar ---------- */
-  .side { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:calc(14px + var(--safe-t)) 16px 6px; color:var(--star); }
-  .mark a { color:inherit; text-decoration:none; }
-  .mark { font-family:"Instrument Serif", "Iowan Old Style", Georgia, serif; font-weight:400; font-size:calc(34px * var(--t)); line-height:1; letter-spacing:-.015em; margin:0; }
-  .calm { background:none; border:1px solid var(--star-line); color:var(--star-dim); border-radius:999px; min-height:44px; padding:8px 16px; font-size:calc(15px * var(--t)); cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
-  .prefs { display:flex; flex-wrap:wrap; gap:8px; }
-  .calm .sq { background:transparent; border:1px solid var(--star-dim); }
-  .calm[aria-pressed="true"] { color:var(--star); }
-  .calm[aria-pressed="true"] .sq { background:var(--accent); border-color:var(--accent); }
-
+  .skip { position:absolute; left:12px; top:-60px; z-index:50; background:var(--accent); color:var(--on-accent); padding:12px 16px; border-radius:8px; text-decoration:none; }
+  .skip:focus { top:12px; }
   .sq { display:inline-block; width:8px; height:8px; flex:0 0 8px; background:currentColor; }
+  canvas#sky { position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
 
-  /* tabs: bottom bar on phone */
-  .tabs { position:fixed; z-index:20; left:50%; transform:translateX(-50%); bottom:calc(12px + var(--safe-b)); display:flex; justify-content:center; gap:6px; padding:6px; background:var(--bar); border:1px solid var(--star-line); border-radius:999px; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
-  .tab { height:48px; min-width:48px; padding:0 13px; border:0; border-radius:999px; background:rgba(var(--sky),.07); color:var(--star-dim); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background .3s var(--ease), color .3s var(--ease), transform .25s var(--spring); }
-  .tab svg { width:22px; height:22px; flex:0 0 22px; }
-  .tab .lbl { max-width:0; overflow:hidden; white-space:nowrap; font-size:calc(17px * var(--t)); font-weight:500; transition:max-width .5s var(--ease), margin .5s var(--ease); }
-  .tab[aria-current="page"] { background:var(--accent); color:var(--on-accent); padding:0 18px 0 14px; }
-  .tab[aria-current="page"] .lbl { max-width:140px; margin-left:8px; }
-  .tab:active { transform:scale(.94); }
-  .tab:disabled { opacity:.35; cursor:not-allowed; }
-
-  /* ---------- stage (night) ---------- */
-  .stage { padding:8px 16px 22px; color:var(--star); }
-  .frame { position:relative; padding:14px; background:var(--frame); border-radius:22px; }
-  .frame .c { position:absolute; width:6px; height:6px; background:var(--star); }
-  .frame .c:nth-child(1) { left:9px; top:9px; } .frame .c:nth-child(2) { right:9px; top:9px; }
-  .frame .c:nth-child(3) { left:9px; bottom:9px; } .frame .c:nth-child(4) { right:9px; bottom:9px; }
-  .frame .c { background:#F5F8F8 !important; }
-
-  .cam { position:relative; display:block; width:100%; aspect-ratio:4/3; padding:0; border:0; border-radius:14px; overflow:hidden; background:#111; cursor:pointer; color:var(--star); text-align:left; transition:transform .25s var(--spring); }
-  .cam:active:not(:disabled) { transform:scale(.99); }
+  /* ---------- the HUD: camera fills the screen, everything floats on it ---------- */
+  .hud { position:fixed; inset:0; z-index:1; }
+  .frame { position:absolute; inset:14px; border-radius:26px; overflow:hidden; background:var(--frame); view-transition-name:camframe; }
+  .frame .c { position:absolute; z-index:3; width:7px; height:7px; background:#F5F8F8; pointer-events:none; }
+  .frame .c:nth-of-type(1) { left:14px; top:14px; } .frame .c:nth-of-type(2) { right:14px; top:14px; }
+  .frame .c:nth-of-type(3) { left:14px; bottom:14px; } .frame .c:nth-of-type(4) { right:14px; bottom:14px; }
+  .cam { position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; background:#111; cursor:pointer; color:var(--star); text-align:left; }
   .cam:disabled { cursor:default; }
   .cam video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
-  .cam .shade { position:absolute; inset:0; background:rgba(15,15,16,.38); transition:opacity .6s var(--ease); }
+  #track { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+  .cam .vig { position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 66%, rgba(0,0,0,.55) 100%); }
+  .cam .shade { position:absolute; inset:0; background:rgba(15,15,16,.34); transition:opacity .6s var(--ease); }
   .cam[data-state="live"] .shade, .cam[data-state="view"] .shade { opacity:0; }
-  .cam .cta { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--accent); color:var(--on-accent); font-size:calc(20px * var(--t)); font-weight:500; padding:14px 22px; border-radius:8px; white-space:nowrap; transition:all .6s var(--ease); }
-  .cam[data-state="live"] .cta { left:auto; top:auto; right:14px; bottom:14px; transform:none; background:rgba(15,15,16,.72); color:var(--star); font-size:calc(17px * var(--t)); padding:10px 14px; display:inline-flex; align-items:center; gap:10px; }
-  .cam[data-state="live"] .cta::before { content:""; width:8px; height:8px; background:#FF6B5E; animation:blink 1.1s steps(2, start) infinite; }
-  .cam[data-state="busy"] .cta, .cam[data-state="off"] .cta { background:rgba(15,15,16,.78); color:var(--star); }
-  .cam[data-state="view"] .cta { display:none; }
+  .cam .cta { position:absolute; z-index:2; left:calc((100% - var(--rail) - 24px) / 2); top:50%; transform:translate(-50%,-50%); background:var(--accent); color:var(--on-accent); font-size:calc(21px * var(--t)); font-weight:500; padding:18px 30px; border-radius:14px; white-space:nowrap; box-shadow:0 14px 40px rgba(0,0,0,.35); transition:left .7s var(--ease), top .7s var(--ease), transform .7s var(--ease), background-color .5s, color .5s, padding .5s var(--ease), font-size .5s var(--ease); }
+  .cam:not([data-state="live"]):hover:not(:disabled) .cta { transform:translate(-50%,-50%) scale(1.03); }
+  .cam:not([data-state="live"]):active:not(:disabled) .cta { transform:translate(-50%,-50%) scale(.97); }
+  .cam[data-state="live"] .cta { left:calc(100% - var(--rail) - 230px); top:calc(100% - 82px); transform:none; background:rgba(12,12,13,.78); color:var(--star); font-size:calc(16px * var(--t)); padding:12px 16px; display:inline-flex; align-items:center; gap:10px; box-shadow:none; }
+  .cam[data-state="live"] .cta::before { content:""; width:9px; height:9px; background:#FF6B5E; animation:blink 1.1s steps(2, start) infinite; }
+  .cam[data-state="busy"] .cta, .cam[data-state="off"] .cta { background:rgba(12,12,13,.8); color:var(--star); }
+  .cam[data-state="view"] .cta { opacity:0; pointer-events:none; }
   @keyframes blink { to { visibility:hidden; } }
-
-  .scan { position:absolute; left:0; right:0; top:0; height:30%; opacity:0; pointer-events:none; background:linear-gradient(to bottom, rgba(106,243,217,0), rgba(106,243,217,.16) 85%, rgba(106,243,217,.9) 100%); transform:translateY(-100%); }
+  .scan { position:absolute; left:0; right:0; top:0; height:30%; opacity:0; pointer-events:none; background:linear-gradient(to bottom, rgba(232,180,188,0), rgba(232,180,188,.14) 85%, rgba(232,180,188,.9) 100%); transform:translateY(-100%); }
   .cam.checking .scan { opacity:1; animation:scan 1.8s linear infinite; }
   @keyframes scan { from { transform:translateY(-100%); } to { transform:translateY(340%); } }
 
-  .readout { display:flex; flex-wrap:wrap; gap:6px 22px; align-items:baseline; margin-top:16px; }
+  /* top bar: logo + settings */
+  .top { position:absolute; z-index:5; left:38px; right:38px; top:32px; display:flex; align-items:center; gap:12px; color:var(--star); pointer-events:none; }
+  .top > * { pointer-events:auto; }
+  .brand { display:inline-flex; align-items:center; gap:12px; color:inherit; text-decoration:none; }
+  .mark { font-family:"Instrument Serif", "Iowan Old Style", Georgia, serif; font-weight:400; font-size:calc(34px * var(--t)); line-height:1; letter-spacing:-.015em; margin:0; }
+  #logo { width:40px; height:40px; overflow:visible; }
+  #logo .vf { fill:none; stroke:currentColor; stroke-width:2; }
+  #logo .lid { transform-origin:20px 20px; transition:transform .12s ease-in; }
+  #logo.blink .lid { transform:scaleY(.08); }
+  #logo .iris { fill:var(--accent); transition:transform .35s var(--ease), fill .4s; }
+  #logo .pupil { fill:#0F0F10; transition:transform .35s var(--ease); }
+  #logo.alert .vf { stroke:#FF8A9A; } #logo.alert .iris { fill:#C2354F; } #logo.alert { animation:shake .5s var(--ease); }
+  #logo.done .iris { fill:#7CC79A; } #logo.done .ring { animation:ring .9s var(--ease); }
+  #logo .ring { fill:none; stroke:#7CC79A; stroke-width:2; opacity:0; transform-origin:20px 20px; }
+  @keyframes ring { 0% { opacity:.9; transform:scale(.6); } 100% { opacity:0; transform:scale(1.5); } }
+  @keyframes shake { 20% { transform:translateX(-3px) rotate(-4deg); } 40% { transform:translateX(3px) rotate(3deg); } 60% { transform:translateX(-2px); } }
+  .prefs { margin-left:auto; display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+  button.calm { background:rgba(12,12,13,.6); border:1px solid var(--star-line); color:var(--star-dim); border-radius:999px; min-height:44px; padding:8px 16px; font-size:calc(15px * var(--t)); cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:background-color .3s, color .3s; }
+  button.calm:hover { color:var(--star); }
+  button.calm .sq { background:transparent; border:1px solid var(--star-dim); }
+  button.calm[aria-pressed="true"] { color:var(--star); }
+  button.calm[aria-pressed="true"] .sq { background:var(--accent); border-color:var(--accent); }
+
+  /* readout: bottom-left HUD card */
+  .readout { position:absolute; z-index:5; left:32px; bottom:32px; max-width:calc(100% - var(--rail) - 320px); background:var(--hud); color:var(--star); border-radius:18px; padding:14px 18px; display:flex; flex-wrap:wrap; gap:6px 22px; align-items:baseline; transition:background-color .7s var(--ease); }
   .readout .item { display:flex; flex-direction:column; }
-  .readout .k { font-size:calc(15px * var(--t)); color:var(--star-dim); }
-  .readout .v { font-size:calc(24px * var(--t)); letter-spacing:-.01em; }
-  .readout .state { flex-basis:100%; display:flex; align-items:center; gap:10px; font-size:calc(19px * var(--t)); color:var(--star); }
+  .readout .k { font-size:calc(14px * var(--t)); color:var(--star-dim); }
+  .readout .v { font-size:calc(22px * var(--t)); letter-spacing:-.01em; }
+  .readout .state { flex-basis:100%; display:flex; align-items:center; gap:10px; font-size:calc(17px * var(--t)); }
   .readout .state .sq { background:var(--star-dim); }
   .readout .state.on .sq { background:#FF6B5E; animation:blink 1.1s steps(2, start) infinite; }
-
-  .clips { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; min-height:26px; }
-  .clip { position:relative; width:56px; height:32px; border:1px solid var(--star-line); border-radius:3px; font-size:calc(13px * var(--t)); display:grid; place-items:center; color:var(--star-dim); overflow:hidden; }
-  .clip.rec { border-color:var(--star); }
-  .clip.chk { border-color:var(--accent); color:var(--accent); }
-  .clip.ok { background:rgba(var(--sky),.08); color:var(--star); }
-  .clip.err { border-color:#C2473F; color:#FF8A80; }
-  .clip.still { border-style:dashed; color:var(--star-dim); }
-  .meter { display:inline-block; width:64px; height:8px; border-radius:4px; background:rgba(var(--sky),.14); vertical-align:middle; overflow:hidden; }
+  .clips { flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px; min-height:0; }
+  .clip { width:52px; height:28px; border:1px solid var(--star-line); border-radius:6px; font-size:calc(13px * var(--t)); display:grid; place-items:center; color:var(--star-dim); animation:pop .35s var(--spring); }
+  .clip.rec { border-color:var(--star); } .clip.chk { border-color:var(--accent); color:var(--accent); }
+  .clip.ok { background:rgba(245,248,248,.1); color:var(--star); } .clip.err { border-color:#C2473F; color:#FF8A80; } .clip.still { border-style:dashed; }
+  @keyframes pop { from { transform:scale(.5); opacity:0; } }
+  .meter { display:inline-block; width:64px; height:8px; border-radius:4px; background:rgba(245,248,248,.16); vertical-align:middle; overflow:hidden; }
   .meter i { display:block; height:100%; width:0; background:var(--star); transition:width .12s linear; }
-  .dark { display:flex; align-items:center; gap:10px; margin:12px 0 0; color:var(--warn); font-size:calc(17px * var(--t)); }
-  .dark .sq { background:var(--warn); }
-  .dark[hidden] { display:none; }
-
-  /* ---------- panel (paper) ---------- */
-  .panel { position:relative; background-color:var(--panel-bg); transition:background-color .7s var(--ease);
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), radial-gradient(rgba(27,31,30,.10) 1px, transparent 1.2px);
-    background-size:160px 160px, 18px 18px;
-    border-radius:20px 20px 0 0; padding:28px 16px calc(112px + var(--safe-b)); min-height:60dvh; }
-  .panel h2 { font-weight:400; font-size:calc(38px * var(--t)); line-height:1; letter-spacing:-.025em; margin:0 0 10px; }
-  .lede { color:var(--graphite); margin:0 0 20px; max-width:44ch; }
-  .view[hidden] { display:none; }
-
-  /* steps */
-  ol#stepList { list-style:none; margin:0; padding:0; border-top:1px solid var(--rule); }
-  ol#stepList li { display:grid; grid-template-columns:30px 1fr auto; gap:4px 12px; align-items:start; padding:16px 0; border-bottom:1px solid var(--rule); }
-  .step .num { font-size:calc(17px * var(--t)); color:var(--muted); padding-top:4px; position:relative; height:24px; }
-  .step .num svg { position:absolute; left:-2px; top:1px; width:24px; height:24px; display:none; }
-  .step .num svg path { fill:none; stroke:var(--pine); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:24; stroke-dashoffset:24; }
-  .step.done .num span { visibility:hidden; }
-  .step.done .num svg { display:block; }
-  .step.done .num svg path { animation:draw .6s var(--ease) forwards; }
-  @keyframes draw { to { stroke-dashoffset:0; } }
-  .step .nm { display:block; font-size:calc(23px * var(--t)); line-height:1.2; letter-spacing:-.01em; }
-  .step .dw { display:block; font-size:calc(16px * var(--t)); color:var(--graphite); margin-top:3px; }
-  .step .bar { position:relative; height:4px; background:var(--linen); border-radius:2px; margin-top:10px; max-width:260px; }
-  .step .bar i { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--ink); border-radius:2px; transition:width .6s var(--ease); }
-  .step .bar b { position:absolute; top:-4px; width:2px; height:12px; background:var(--graphite); }
-  .step .bar b.t1 { left:60%; } .step .bar b.t2 { left:85%; }
-  .step.checking .st .w { color:var(--ink); } .step.checking .st .w .sq { background:transparent; border:1.5px solid var(--ink); }
-  .step .st { text-align:right; padding-top:4px; max-width:9.5em; }
-  .step .st .w { white-space:nowrap; }
-  .step .st .w { display:inline-flex; align-items:center; gap:7px; font-size:calc(16px * var(--t)); color:var(--graphite); }
-  .step .st .w .sq { background:var(--rule); }
-  .step .st .ev { display:block; font-size:calc(14px * var(--t)); color:var(--muted); margin-top:3px; }
-  .step.done .st .w { color:var(--pine); } .step.done .st .w .sq { background:var(--pine); }
-  .step.done .bar i { background:var(--pine); }
-  .step.missed .st .w { color:var(--oxblood); } .step.missed .st .w .sq { background:var(--oxblood); }
-  .step.missed .nm { color:var(--oxblood); }
-  .panel[data-tab="teach"] .step .st, .panel[data-tab="teach"] .step .bar { display:none; }
-  .panel[data-tab="save"] #stepList { display:none; }
-  .panel[data-tab="teach"] .step .num span { visibility:visible; }
-  .panel[data-tab="teach"] .step .num svg { display:none; }
-  .panel[data-tab="teach"] .step .nm { color:var(--ink); }
+  .dark { flex-basis:100%; display:flex; align-items:center; gap:10px; margin:0; color:#FFD27A; font-size:calc(16px * var(--t)); }
+  .dark .sq { background:#FFD27A; } .dark[hidden] { display:none; }
   body:not([data-tab="watch"]) .readout .item, body:not([data-tab="watch"]) .clips { display:none; }
 
-  .tips { list-style:none; margin:0 0 22px; padding:0; display:grid; gap:8px; }
-  .tips li { display:flex; gap:12px; align-items:baseline; color:var(--graphite); }
-  .tips .sq { background:#6B6F3A; transform:translateY(-1px); }
-  .hint { font-size:calc(15px * var(--t)); color:var(--graphite); margin:0 0 12px; }
-  .panel[data-tab="teach"] ol#stepList { border-top:0; display:grid; gap:10px; }
-  .panel[data-tab="teach"] ol#stepList li { background:#FFFFFF; border:1px solid var(--rule); border-radius:14px; padding:14px 16px; }
-  .panel[data-tab="teach"] .step .nm { border-radius:6px; outline-offset:2px; cursor:text; }
-  .panel[data-tab="teach"] .step .nm:hover { background:rgba(107,111,58,.08); }
-  .panel[data-tab="watch"] .view[data-view="watch"] h2 { margin-bottom:6px; }
-  .progress { font-size:calc(17px * var(--t)); color:var(--graphite); margin:0 0 14px; }
+  /* dock: morphs between modes */
+  .tabs { position:absolute; z-index:6; left:calc((100% - var(--rail) - 24px) / 2); top:24px; transform:translateX(-50%); display:flex; gap:6px; padding:6px; background:rgba(12,12,13,.82); border:1px solid var(--star-line); border-radius:999px; }
+  .tab { height:52px; min-width:52px; padding:0 15px; border:0; border-radius:999px; background:rgba(245,248,248,.07); color:var(--star-dim); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .45s var(--ease), color .45s var(--ease), padding .55s var(--ease), transform .25s var(--spring); }
+  .tab svg { width:22px; height:22px; flex:0 0 22px; }
+  .tab .lbl { max-width:0; overflow:hidden; white-space:nowrap; font-size:calc(17px * var(--t)); font-weight:500; transition:max-width .55s var(--ease), margin .55s var(--ease); }
+  .tab:hover:not(:disabled) { color:var(--star); }
+  .tab[aria-current="page"] { background:var(--accent); color:var(--on-accent); padding:0 20px 0 16px; }
+  .tab[aria-current="page"] .lbl { max-width:150px; margin-left:9px; }
+  .tab:active { transform:scale(.93); }
+  .tab:disabled { opacity:.35; cursor:not-allowed; }
+
+  /* rail: floating card + step chips on the right */
+  .rail { position:absolute; z-index:5; right:30px; top:96px; bottom:30px; width:var(--rail); display:flex; flex-direction:column; gap:10px; overflow:auto; scrollbar-width:thin; padding:2px; }
+  .card { background:var(--card); border-radius:20px; padding:20px 22px; box-shadow:0 20px 50px rgba(0,0,0,.28); }
+  .rail h2 { font-weight:400; font-size:calc(32px * var(--t)); line-height:1; letter-spacing:-.025em; margin:0 0 8px; }
+  .lede { color:var(--graphite); margin:0 0 12px; font-size:calc(16px * var(--t)); }
+  .view[hidden] { display:none; }
+  .rail.swap .card, .rail.swap li { animation:railIn .6s var(--ease) both; }
+  .rail.swap li { animation-delay:calc(var(--i, 0) * 50ms + 80ms); }
+  @keyframes railIn { from { opacity:0; transform:translateX(24px); } }
+  .progress { display:flex; align-items:center; gap:12px; font-size:calc(16px * var(--t)); color:var(--graphite); margin:6px 0 0; }
   .progress b { color:var(--ink); font-weight:500; }
+  .pbar { flex:1; height:6px; border-radius:3px; background:var(--linen); overflow:hidden; }
+  .pbar i { display:block; height:100%; width:0; background:var(--pine); border-radius:3px; transition:width .8s var(--ease); }
+  .say { display:flex; align-items:center; gap:10px; min-height:44px; margin:4px 0 0; font-size:calc(16px * var(--t)); color:var(--ink); cursor:pointer; }
+  .say input { width:22px; height:22px; accent-color:var(--ink); margin:0; }
+  details { margin-top:6px; }
+  summary { cursor:pointer; color:var(--graphite); font-size:calc(15px * var(--t)); padding:8px 0; }
+  details > p { margin:4px 0 0; color:var(--graphite); font-size:calc(15px * var(--t)); }
 
-  details { margin-top:22px; }
-  summary { cursor:pointer; padding:10px 0; color:var(--graphite); font-size:calc(17px * var(--t)); }
-  textarea { width:100%; min-height:220px; margin-top:12px; font:calc(15px * var(--t))/1.5 ui-monospace, Menlo, Consolas, monospace; background:var(--linen); border:1px solid var(--rule); border-radius:8px; padding:12px; color:var(--ink); }
-  #log { max-height:260px; overflow:auto; font-size:calc(15px * var(--t)); line-height:1.55; margin:12px 0 0; padding:0; color:var(--graphite); white-space:pre-wrap; }
+  ol#stepList { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  ol#stepList li { display:grid; grid-template-columns:28px 1fr auto; gap:2px 10px; align-items:start; padding:13px 16px; background:var(--chip); border-radius:16px; transition:background-color .5s var(--ease), color .5s var(--ease), transform .5s var(--spring); }
+  .step .num { font-size:calc(15px * var(--t)); color:var(--muted); padding-top:3px; position:relative; height:24px; }
+  .step .num svg { position:absolute; left:-3px; top:0; width:24px; height:24px; display:none; }
+  .step .num svg path { fill:none; stroke:var(--pine); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:24; stroke-dashoffset:24; }
+  .step.done .num span { visibility:hidden; } .step.done .num svg { display:block; }
+  .step.done .num svg path { animation:draw .6s var(--ease) forwards; }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  .step .nm { display:block; font-size:calc(19px * var(--t)); line-height:1.25; letter-spacing:-.01em; }
+  .step .dw { display:block; font-size:calc(14px * var(--t)); color:var(--graphite); margin-top:2px; }
+  .step .bar { position:relative; height:4px; background:var(--linen); border-radius:2px; margin-top:8px; }
+  .step .bar i { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--ink); border-radius:2px; transition:width .6s var(--ease); }
+  .step .bar b { position:absolute; top:-3px; width:2px; height:10px; background:var(--graphite); }
+  .step .bar b.t1 { left:60%; } .step .bar b.t2 { left:85%; }
+  .step .st { text-align:right; padding-top:3px; max-width:9em; }
+  .step .st .w { display:inline-flex; align-items:center; gap:7px; font-size:calc(15px * var(--t)); color:var(--graphite); white-space:nowrap; }
+  .step .st .w .sq { background:var(--rule); }
+  .step .st .ev { display:block; font-size:calc(13px * var(--t)); color:var(--muted); margin-top:2px; }
+  .step.done { background:#EEF6F0 !important; } .step.done .st .w { color:var(--pine); } .step.done .st .w .sq { background:var(--pine); } .step.done .bar i { background:var(--pine); }
+  .step.done.flash { animation:flash .9s var(--ease); }
+  @keyframes flash { 0% { transform:scale(1.03); box-shadow:0 0 0 3px rgba(46,107,79,.45); } 100% { transform:none; box-shadow:0 0 0 0 rgba(46,107,79,0); } }
+  .step.missed { background:var(--burgundy) !important; color:#fff; animation:nudge .5s var(--ease); }
+  .step.missed .dw, .step.missed .st .ev, .step.missed .num { color:rgba(255,255,255,.78); }
+  .step.missed .st .w { color:#fff; } .step.missed .st .w .sq { background:#fff; } .step.missed .bar { background:rgba(255,255,255,.2); } .step.missed .bar i { background:#fff; }
+  @keyframes nudge { 25% { transform:translateX(-6px); } 50% { transform:translateX(5px); } 75% { transform:translateX(-2px); } }
+  .step.checking .st .w { color:var(--ink); } .step.checking .st .w .sq { background:transparent; border:1.5px solid var(--ink); }
+  .panel[data-tab="teach"] .step .st, .panel[data-tab="teach"] .step .bar { display:none; }
+  .panel[data-tab="teach"] .step .num span { visibility:visible; } .panel[data-tab="teach"] .step .num svg { display:none; }
+  .panel[data-tab="teach"] .step { background:var(--chip) !important; color:var(--ink) !important; animation:none; }
+  .panel[data-tab="teach"] .step .dw { color:var(--graphite); }
+  .panel[data-tab="teach"] .step .num { color:var(--muted); }
+  .panel[data-tab="teach"] .step .nm { border-radius:6px; cursor:text; }
+  .panel[data-tab="teach"] .step .nm:hover { background:rgba(107,111,58,.1); }
+  .panel[data-tab="save"] #stepList { display:none; }
+  .tips { list-style:none; margin:0 0 12px; padding:0; display:grid; gap:6px; }
+  .tips li { display:flex; gap:12px; align-items:baseline; color:var(--graphite); font-size:calc(16px * var(--t)); }
+  .tips .sq { background:var(--olive); transform:translateY(-1px); }
+  .hint { font-size:calc(14px * var(--t)); color:var(--graphite); margin:0; }
+  textarea { width:100%; min-height:200px; margin-top:8px; font:calc(14px * var(--t))/1.5 ui-monospace, Menlo, Consolas, monospace; background:var(--linen); border:1px solid var(--rule); border-radius:10px; padding:12px; color:var(--ink); }
+  #log { max-height:220px; overflow:auto; font-size:calc(14px * var(--t)); line-height:1.55; margin:6px 0 0; color:var(--graphite); white-space:pre-wrap; }
   #log .e-done { color:var(--pine); } #log .e-alert { color:var(--oxblood); }
-
-  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:8px; padding:14px 20px; font-size:calc(18px * var(--t)); font-weight:500; cursor:pointer; background:var(--accent); color:var(--on-accent); transition:transform .25s var(--spring), opacity .2s; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:12px; padding:14px 22px; font-size:calc(17px * var(--t)); font-weight:500; cursor:pointer; background:var(--ink); color:#fff; transition:transform .25s var(--spring), opacity .2s; }
   .btn:active:not(:disabled) { transform:scale(.96); }
-  .btn.quiet { background:transparent; color:var(--ink); border:1px solid var(--rule); padding:10px 16px; font-size:calc(17px * var(--t)); }
+  .btn.quiet { background:transparent; color:var(--ink); border:1px solid var(--rule); padding:10px 16px; font-size:calc(16px * var(--t)); }
   .btn:disabled { opacity:.4; cursor:not-allowed; }
-  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px; }
-  .status { color:var(--graphite); font-size:calc(16px * var(--t)); }
-
-  .field { display:block; margin:0 0 16px; }
-  .field > span { display:block; font-size:calc(16px * var(--t)); color:var(--graphite); margin-bottom:6px; }
-  .field input, .field select { width:100%; background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px; font-size:calc(18px * var(--t)); }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
+  .status { color:var(--graphite); font-size:calc(15px * var(--t)); }
+  .field { display:block; margin:0 0 14px; }
+  .field > span { display:block; font-size:calc(15px * var(--t)); color:var(--graphite); margin-bottom:6px; }
+  .field input, .field select, .pair select { width:100%; background:var(--paper); border:1px solid var(--rule); border-radius:10px; padding:12px; font-size:calc(17px * var(--t)); }
   .pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .pair select { width:100%; background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px; font-size:calc(18px * var(--t)); }
-  .summary { font-size:calc(21px * var(--t)); margin:0 0 22px; }
+  .summary { font-size:calc(19px * var(--t)); margin:0 0 16px; }
   .savewrap { position:relative; display:inline-block; }
   .star-rise { position:absolute; left:50%; top:0; width:18px; height:18px; margin-left:-9px; pointer-events:none; color:var(--ink); animation:rise 1.1s var(--ease) forwards; }
   @keyframes rise { 0% { transform:translateY(0) scale(.4) rotate(0); opacity:0; } 20% { opacity:1; } 100% { transform:translateY(-70px) scale(1) rotate(90deg); opacity:0; } }
 
-  /* ---------- alert ---------- */
-  #alert { position:fixed; z-index:30; left:12px; right:12px; top:calc(10px + var(--safe-t)); background:var(--oxblood); color:#fff; border-radius:14px; padding:18px 20px 20px; box-shadow:0 18px 50px rgba(0,0,0,.35); transform:translateY(calc(-100% - 40px)); visibility:hidden; transition:transform .7s var(--ease), visibility 0s linear .7s; }
-  #alert.show { transform:translateY(0); visibility:visible; transition:transform .7s var(--ease), visibility 0s; }
-  #alert .kind { display:flex; align-items:center; gap:8px; font-size:calc(16px * var(--t)); color:rgba(255,255,255,.8); margin-bottom:6px; }
+  /* alert: drops into the middle of the camera */
+  #alert { position:fixed; z-index:30; left:46px; right:calc(var(--rail) + 76px); top:100px; background:var(--burgundy); color:#fff; border-radius:22px; padding:22px 26px 26px; box-shadow:0 30px 80px rgba(0,0,0,.45); transform:translateY(-30px) scale(.94); opacity:0; visibility:hidden; transition:transform .6s var(--spring), opacity .35s var(--ease), visibility 0s linear .6s; }
+  #alert.show { transform:none; opacity:1; visibility:visible; transition:transform .6s var(--spring), opacity .35s var(--ease), visibility 0s; }
+  #alert .top2 { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  #alert .kind { display:flex; align-items:center; gap:8px; font-size:calc(16px * var(--t)); color:rgba(255,255,255,.82); margin-bottom:6px; }
   #alert .kind .sq { background:#fff; }
-  #alert .top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-  #alert .x { flex:none; background:rgba(255,255,255,.16); color:#fff; border:0; border-radius:8px; min-height:44px; padding:0 16px; font-size:calc(16px * var(--t)); cursor:pointer; }
+  #alert .x { flex:none; background:rgba(255,255,255,.16); color:#fff; border:0; border-radius:10px; min-height:44px; padding:0 16px; font-size:calc(16px * var(--t)); cursor:pointer; }
   #alert .x:focus-visible { outline-color:#fff; }
-  #alert .line { font-size:calc(clamp(30px, 4.6vw, 56px) * var(--t)); line-height:1.06; letter-spacing:-.02em; font-weight:500; }
+  #alert .line { font-size:calc(clamp(30px, 3.6vw, 54px) * var(--t)); line-height:1.06; letter-spacing:-.02em; font-weight:500; }
 
-  /* ---------- desktop ---------- */
-  @media (min-width:960px) {
-    .app { display:grid; grid-template-columns:var(--side) minmax(0,1fr) var(--panel); height:100dvh; }
-    .side { flex-direction:column; align-items:stretch; justify-content:flex-start; padding:28px 20px; gap:28px; }
-    .side .prefs { margin-top:auto; flex-direction:column; align-items:flex-start; order:3; }
-    .tabs { position:static; transform:none; flex-direction:column; gap:4px; padding:0; background:none; border:0; border-radius:0; backdrop-filter:none; -webkit-backdrop-filter:none; order:2; }
-    .tab { justify-content:flex-start; height:44px; padding:0 14px; border-radius:8px; background:transparent; }
-    .tab .lbl { max-width:none; margin-left:12px; }
-    .tab[aria-current="page"] { padding:0 14px; }
-    .tab[aria-current="page"] .lbl { margin-left:12px; }
-    .tab:hover:not([aria-current="page"]):not(:disabled) { background:rgba(var(--sky),.07); color:var(--star); }
-    .stage { padding:40px 36px; overflow:auto; display:flex; flex-direction:column; justify-content:center; }
-    .frame { padding:18px; }
-    .cam { aspect-ratio:16/9; }
-    .cam .cta { font-size:calc(22px * var(--t)); padding:16px 26px; }
-    .panel { border-radius:0; padding:40px 36px 40px; overflow:auto; min-height:0; }
-    .panel h2 { font-size:calc(48px * var(--t)); }
-    .step .nm { font-size:calc(26px * var(--t)); }
-    #alert { left:calc(var(--side) + 36px); right:36px; top:28px; padding:22px 28px 26px; }
+  /* ---------- phone and narrow: camera on top, rail below, dock fixed ---------- */
+  @media (max-width:900px) {
+    :root { --rail:100%; }
+    .hud { position:relative; inset:auto; display:flex; flex-direction:column; gap:12px; padding:12px 12px calc(110px + var(--safe-b)); }
+    .frame { position:relative; inset:auto; height:min(62svh, 560px); border-radius:22px; }
+    .top { left:28px; right:28px; top:calc(26px + var(--safe-t)); }
+    .prefs { gap:6px; } button.calm { min-height:40px; padding:6px 12px; }
+    .mark { font-size:calc(28px * var(--t)); } #logo { width:32px; height:32px; }
+    .cam .cta { left:50%; }
+    .cam[data-state="live"] .cta { left:auto; right:16px; top:auto; bottom:16px; }
+    .readout { position:static; max-width:none; background:var(--frame); }
+    .rail { position:static; width:auto; overflow:visible; padding:0; }
+    .tabs { position:fixed; left:50%; top:auto; bottom:calc(12px + var(--safe-b)); }
+    #alert { left:12px; right:12px; top:calc(12px + var(--safe-t)); }
   }
-  @media (min-width:960px) and (max-height:760px) { .cam { aspect-ratio:16/8; } }
+  @media (max-width:520px) { .prefs #themeBtn { display:none; } }
 
   /* ---------- calm + reduced motion ---------- */
   @media (prefers-reduced-motion: reduce) {
-    .cam .cta, #alert, .tab .lbl, .step .bar i { transition-duration:.01s; }
-    .star-rise { animation:none; display:none; }
+    .cam .cta, .tab, .tab .lbl, .step .bar i, .rail.swap .card, .rail.swap li { transition-duration:.01s; animation-duration:.01s; }
+    .star-rise, #logo.alert { animation:none; }
     .cam[data-state="live"] .cta::before, .readout .state.on .sq { animation:none; }
   }
-  @media (prefers-contrast: more) {
-    :root { --graphite:#3A3F3D; --muted:#4A4F4D; --rule:#B4B8B6; --star-dim:rgba(245,248,248,.88); --star-line:rgba(245,248,248,.45); }
-  }
+  @media (prefers-contrast: more) { :root { --graphite:#3A3F3D; --muted:#4A4F4D; --rule:#B4B8B6; --star-dim:rgba(245,248,248,.9); } }
   @media (forced-colors: active) {
     .sq { forced-color-adjust:none; border:1px solid CanvasText; }
     .cam .cta, .btn, .tab[aria-current="page"] { border:2px solid ButtonText; }
     #alert { border:3px solid CanvasText; }
   }
-  .say { display:flex; align-items:center; gap:10px; min-height:44px; margin:0 0 10px; font-size:calc(17px * var(--t)); color:var(--ink); cursor:pointer; }
-  .say input { width:22px; height:22px; accent-color:var(--ink); margin:0; }
   body.calm *, body.calm *::before, body.calm *::after { animation:none !important; transition:none !important; }
   body.calm .cam.checking .scan { opacity:0; }
   body.calm .step.done .num svg path { stroke-dashoffset:0; }
@@ -256,116 +255,125 @@
 <div id="srStatus" class="sr" role="status" aria-live="polite"></div>
 
 <div id="alert" aria-hidden="true">
-  <div class="top"><div class="kind"><span class="sq"></span><span id="alertKind">Step skipped</span></div><button class="x" id="alertClose" tabindex="-1">Dismiss</button></div>
+  <div class="top2"><div class="kind"><span class="sq"></span><span id="alertKind">Step skipped</span></div><button class="x" id="alertClose" tabindex="-1">Dismiss</button></div>
   <div class="line" id="alertLine"></div>
 </div>
 
-<div class="app">
-  <aside class="side">
-    <h1 class="mark"><a href="/" aria-label="Showunce home">Showunce</a></h1>
-    <nav class="tabs" aria-label="Sections">
-      <button class="tab" data-tab="teach" id="tabTeach">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg>
-        <span class="lbl">Teach</span>
-      </button>
-      <button class="tab" data-tab="watch" id="tabWatch">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span class="lbl">Watch</span>
-      </button>
-      <button class="tab" data-tab="save" id="tabSave">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m-4-4 4 4 4-4"/><path d="M4 15v4h16v-4"/></svg>
-        <span class="lbl">Save</span>
-      </button>
-    </nav>
+<div class="hud">
+  <div class="frame">
+    <span class="c"></span><span class="c"></span><span class="c"></span><span class="c"></span>
+    <button class="cam" id="camBtn" data-state="busy">
+      <video id="preview" autoplay muted playsinline></video>
+      <canvas id="track" aria-hidden="true"></canvas>
+      <span class="vig"></span>
+      <span class="shade"></span>
+      <span class="scan"></span>
+      <span class="cta" id="camCta">Starting camera…</span>
+    </button>
+  </div>
+
+  <header class="top">
+    <a class="brand" href="/" aria-label="Showunce home">
+      <svg id="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <rect class="vf" x="3" y="3" width="34" height="34" rx="11"/>
+        <circle class="ring" cx="20" cy="20" r="13"/>
+        <g class="lid"><circle class="iris" id="iris" cx="20" cy="20" r="8"/><circle class="pupil" id="pupil" cx="20" cy="20" r="3.2"/></g>
+      </svg>
+      <span class="mark">Showunce</span>
+    </a>
     <div class="prefs">
       <button class="calm" id="themeBtn"><span class="sq"></span><span id="themeLbl">Theme: auto</span></button>
+      <button class="calm" id="trackBtn" aria-pressed="true"><span class="sq"></span>Tracking</button>
       <button class="calm" id="bigBtn" aria-pressed="false"><span class="sq"></span>Larger text</button>
       <button class="calm" id="calmBtn" aria-pressed="false"><span class="sq"></span>Calm</button>
     </div>
-  </aside>
+  </header>
 
-  <main class="stage">
-    <div class="frame">
-      <span class="c"></span><span class="c"></span><span class="c"></span><span class="c"></span>
-      <button class="cam" id="camBtn" data-state="busy">
-        <video id="preview" autoplay muted playsinline></video>
-        <span class="shade"></span>
-        <span class="scan"></span>
-        <span class="cta" id="camCta">Starting camera…</span>
-      </button>
-    </div>
-
-    <div class="readout">
-      <div class="state" id="stateRow"><span class="sq"></span><span id="runStatus">Starting camera…</span></div>
-      <div class="item"><span class="k">Clip</span><span class="v" id="clipNo">0</span></div>
-      <div class="item"><span class="k">Last check</span><span class="v" id="lat">–</span></div>
-      <div class="item"><span class="k">Average</span><span class="v" id="latAvg">–</span></div>
-      <div class="item"><span class="k">Checking now</span><span class="v" id="inflight">0</span></div>
-      <div class="item motion"><span class="k">Motion</span><span class="v"><span class="meter" aria-hidden="true"><i id="motionBar"></i></span> <span id="motionWord">Still</span></span></div>
-    </div>
+  <div class="readout">
+    <div class="state" id="stateRow"><span class="sq"></span><span id="runStatus">Starting camera…</span></div>
+    <div class="item"><span class="k">Clip</span><span class="v" id="clipNo">0</span></div>
+    <div class="item"><span class="k">Last check</span><span class="v" id="lat">–</span></div>
+    <div class="item"><span class="k">Average</span><span class="v" id="latAvg">–</span></div>
+    <div class="item"><span class="k">Checking now</span><span class="v" id="inflight">0</span></div>
+    <div class="item motion"><span class="k">Motion</span><span class="v"><span class="meter" aria-hidden="true"><i id="motionBar"></i></span> <span id="motionWord">Still</span></span></div>
     <p class="dark" id="darkNote" role="note" hidden><span class="sq"></span>Too dark to see. Turn on a light.</p>
     <div class="clips" id="clips" aria-hidden="true"></div>
     <span id="camStatus" class="sr"></span>
-  </main>
+  </div>
 
-  <section class="panel" id="panel" data-tab="watch" tabindex="-1" aria-label="Steps">
-    <!-- Teach -->
-    <div class="view" data-view="teach" hidden>
-      <h2>Teach the steps</h2>
-      <p class="lede" id="teachStatus">Do the procedure once in front of the camera. Tap the camera to start, and again when you finish. Gemini 4 Neon turns it into steps.</p>
-      <ul class="tips">
-        <li><span class="sq"></span>Keep the whole workspace in view.</li>
-        <li><span class="sq"></span>Do one step at a time, with a short pause between steps.</li>
-        <li><span class="sq"></span>Finish each step clearly, for example the item all the way in the bag.</li>
-        <li><span class="sq"></span>Most procedures take 20 to 40 seconds.</li>
-      </ul>
-      <p class="hint">Steps it learned. Tap a name to rename it.</p>
-    </div>
-    <!-- Watch -->
-    <div class="view" data-view="watch">
-      <h2>Watch a run</h2>
-      <p class="lede">Tap the camera to start. Every 3 seconds Gemini Decision 1 looks at the last 6 seconds. A step counts when it is 0.85 sure once, or 0.60 sure twice in a row.</p>
-      <label class="say"><input type="checkbox" id="sayEach"> Say each step out loud when it's done</label>
-      <p class="progress" id="progress"></p>
-    </div>
-    <!-- Save -->
-    <div class="view" data-view="save" hidden>
-      <h2>Save this run</h2>
-      <p class="summary" id="saveSummary">No run yet. Watch a run first.</p>
-      <label class="field"><span>Player name</span><input id="player" placeholder="Someone outside the team" autocomplete="off"></label>
-      <label class="field"><span>Secret card they drew</span>
-        <select id="cardType">
-          <option value="none">None: did every step in order</option>
-          <option value="skip">Skip: left a step out</option>
-          <option value="swap">Swap: did two steps in the wrong order</option>
-          <option value="extra">Extra: added a step</option>
-        </select>
-      </label>
-      <div class="field" id="cardStepsField"><span>Which step</span>
-        <div class="pair"><select id="cardStep" aria-label="Step"></select><select id="cardStep2" aria-label="Second step"></select></div>
+  <section class="rail panel" id="panel" data-tab="watch" tabindex="-1" aria-label="Steps">
+    <div class="card">
+      <div class="view" data-view="teach" hidden>
+        <h2>Teach the steps</h2>
+        <p class="lede" id="teachStatus">Do the procedure once in front of the camera. Tap the camera to start, and again when you finish. Gemini 4 Neon turns it into steps.</p>
+        <ul class="tips">
+          <li><span class="sq"></span>Keep the whole workspace in view.</li>
+          <li><span class="sq"></span>One step at a time, with a short pause between.</li>
+          <li><span class="sq"></span>Finish each step clearly.</li>
+          <li><span class="sq"></span>Most procedures take 20 to 40 seconds.</li>
+        </ul>
+        <p class="hint">Steps it learned. Tap a name to rename it.</p>
       </div>
-      <label class="field"><span>Note (optional)</span><input id="cardNote" placeholder="What the extra action was"></label>
-      <div class="row">
-        <span class="savewrap"><button id="saveBtn" class="btn" disabled>Save run</button></span>
-        <span id="saveStatus" class="status">Set the card, then save.</span>
+      <div class="view" data-view="watch">
+        <h2>Watch a run</h2>
+        <p class="progress"><span id="progress"></span><span class="pbar" aria-hidden="true"><i id="pbar"></i></span></p>
+        <label class="say"><input type="checkbox" id="sayEach"> Say each step out loud</label>
+        <details><summary>How it decides</summary><p>Every 3 seconds Gemini Decision 1 looks at the last 6 seconds. A step counts when it is 0.85 sure once, or 0.60 sure twice in a row.</p></details>
+      </div>
+      <div class="view" data-view="save" hidden>
+        <h2>Save this run</h2>
+        <p class="summary" id="saveSummary">No run yet. Watch a run first.</p>
+        <label class="field"><span>Player name</span><input id="player" placeholder="Someone outside the team" autocomplete="off"></label>
+        <label class="field"><span>Secret card they drew</span>
+          <select id="cardType">
+            <option value="none">None: did every step in order</option>
+            <option value="skip">Skip: left a step out</option>
+            <option value="swap">Swap: did two steps in the wrong order</option>
+            <option value="extra">Extra: added a step</option>
+          </select>
+        </label>
+        <div class="field" id="cardStepsField"><span>Which step</span>
+          <div class="pair"><select id="cardStep" aria-label="Step"></select><select id="cardStep2" aria-label="Second step"></select></div>
+        </div>
+        <label class="field"><span>Note (optional)</span><input id="cardNote" placeholder="What the extra action was"></label>
+        <div class="row">
+          <span class="savewrap"><button id="saveBtn" class="btn" disabled>Save run</button></span>
+          <span id="saveStatus" class="status">Set the card, then save.</span>
+        </div>
       </div>
     </div>
 
     <ol id="stepList"></ol>
 
-    <details class="view" data-view="teach" hidden>
-      <summary>Edit steps as JSON</summary>
-      <textarea id="stepsJson" spellcheck="false" aria-label="Steps JSON"></textarea>
-      <div class="row">
-        <button id="loadBtn" class="btn quiet">Use these steps</button>
-        <span id="loadStatus" class="status"></span>
-      </div>
-    </details>
-    <details class="view" data-view="watch">
-      <summary>Event log</summary>
-      <pre id="log"></pre>
-    </details>
+    <div class="card view" data-view="teach" hidden>
+      <details>
+        <summary>Edit steps as JSON</summary>
+        <textarea id="stepsJson" spellcheck="false" aria-label="Steps JSON"></textarea>
+        <div class="row">
+          <button id="loadBtn" class="btn quiet">Use these steps</button>
+          <span id="loadStatus" class="status"></span>
+        </div>
+      </details>
+    </div>
+    <div class="card view" data-view="watch">
+      <details><summary>Event log</summary><pre id="log"></pre></details>
+    </div>
   </section>
+
+  <nav class="tabs" aria-label="Modes">
+    <button class="tab" data-tab="teach" id="tabTeach" aria-label="Teach">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg>
+      <span class="lbl">Teach</span>
+    </button>
+    <button class="tab" data-tab="watch" id="tabWatch" aria-label="Watch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="lbl">Watch</span>
+    </button>
+    <button class="tab" data-tab="save" id="tabSave" aria-label="Save">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m-4-4 4 4 4-4"/><path d="M4 15v4h16v-4"/></svg>
+      <span class="lbl">Save</span>
+    </button>
+  </nav>
 </div>
 
 <script>
@@ -489,6 +497,7 @@ function setTab(t) {
   document.querySelectorAll(".view").forEach(v => { v.hidden = v.dataset.view !== t; });
   document.querySelectorAll(".step .nm").forEach(el => { el.contentEditable = t === "teach" ? "plaintext-only" : "false"; });
   try { Sky.recolor(); } catch (_) {}
+  const rail = $("panel"); rail.classList.remove("swap"); void rail.offsetWidth; rail.classList.add("swap");
   updateCam();
 }
 
@@ -528,6 +537,7 @@ async function initCamera() {
     $("preview").srcObject = stream;
     mimeType = pickMime();
     Motion.start();
+    Tracker.start();
     $("camStatus").textContent = "Camera ready (" + (mimeType || "default codec") + ")";
     $("runStatus").textContent = STR.ready;
   } catch (e) {
@@ -565,6 +575,7 @@ function renderSteps() {
     const li = document.createElement("li");
     li.className = "step";
     li.id = "step-" + s.id;
+    li.style.setProperty("--i", i);
     li.innerHTML = '<span class="num"><span></span>' + CHECK_SVG + '</span>' +
       '<div><span class="nm"></span><span class="dw"></span><div class="bar" aria-hidden="true"><i></i><b class="t1" title="0.60, counts if seen twice"></b><b class="t2" title="0.85, counts at once"></b></div></div>' +
       '<span class="st"><span class="w"><span class="sq"></span><span class="wt"></span></span><span class="ev"></span></span>';
@@ -620,6 +631,7 @@ function setEvidence(id, text) {
 function updateProgress() {
   const n = steps.filter(s => doneMap[s.id]).length;
   $("progress").innerHTML = "<b>" + n + " of " + steps.length + "</b> steps done";
+  $("pbar").style.width = (steps.length ? n / steps.length * 100 : 0) + "%";
   $("saveSummary").textContent = hasRun ? "Last run: " + n + " of " + steps.length + " steps done." : "No run yet. Watch a run first.";
 }
 
@@ -766,6 +778,8 @@ function showAlert(line, kind) {
   el.setAttribute("aria-hidden", "false");
   $("alertClose").tabIndex = 0;
   announce((STR.kind[kind] || "Check the steps") + ". " + line, true);
+  Logo.alert();
+  Tracker.alert();
   clearTimeout(showAlert._t);
   showAlert._t = setTimeout(hideAlert, 12000);
   try { if (!document.body.classList.contains("calm") && navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (_) {}
@@ -899,6 +913,9 @@ function applyWindow(idx, answers, ms, active) {
       log("clip " + idx + ": DONE " + s.name + " (p=" + a.p.toFixed(2) + ", " + ms + " ms)", "e-done");
       announce("Step " + (steps.indexOf(s) + 1) + " done: " + s.name);
       sayStep(s.name + ", done.");
+      Logo.done();
+      Tracker.done();
+      const chip = $("step-" + s.id); chip.classList.add("flash"); setTimeout(() => chip.classList.remove("flash"), 1000);
       newlyDone.push(s);
     } else {
       setStepClass(s.id, "checking");
@@ -1141,6 +1158,151 @@ function setCalm(on) {
   Sky.setCalm(on);
 }
 
+// ---------- logo: an eye that follows the cursor, blinks, and reacts to what the app sees ----------
+const Logo = (() => {
+  const svg = $("logo"), iris = $("iris"), pupil = $("pupil");
+  const still = () => document.body.classList.contains("calm") || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  addEventListener("pointermove", (e) => {
+    if (still()) return;
+    const r = svg.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 300);
+    iris.style.transform = "translate(" + (dx / d * 3.5 * k).toFixed(2) + "px," + (dy / d * 3.5 * k).toFixed(2) + "px)";
+    pupil.style.transform = "translate(" + (dx / d * 5 * k).toFixed(2) + "px," + (dy / d * 5 * k).toFixed(2) + "px)";
+  });
+  (function blink() {
+    setTimeout(() => { if (!still()) { svg.classList.add("blink"); setTimeout(() => svg.classList.remove("blink"), 140); } blink(); }, 3000 + Math.random() * 4000);
+  })();
+  function flag(cls, ms) { svg.classList.remove(cls); void svg.getBoundingClientRect(); svg.classList.add(cls); clearTimeout(flag[cls]); flag[cls] = setTimeout(() => svg.classList.remove(cls), ms); }
+  return { alert: () => flag("alert", 2600), done: () => flag("done", 1000) };
+})();
+
+// ---------- tracking: face box, arm tracing and hand joints, all on this device ----------
+// MediaPipe Pose (lite) and Hand Landmarker run in the browser from /vendor. Nothing is sent anywhere,
+// nobody is identified: the box only says a person is in view.
+const Tracker = (() => {
+  const cv = $("track"), ctx = cv.getContext("2d"), video = $("preview");
+  let pose = null, hands = null, on = true, loading = false, last = -1, frameNo = 0, slow = false;
+  let face = null, trails = [[], []], pulses = [], handPts = [];
+  const ARM = [[11, 13], [13, 15], [12, 14], [14, 16], [11, 12], [11, 23], [12, 24]];
+  let HAND = [];
+  const still = () => document.body.classList.contains("calm") || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const accent = () => getComputedStyle(document.body).getPropertyValue("--accent").trim() || "#E8B4BC";
+  async function load() {
+    if (loading || pose) return; loading = true;
+    try {
+      const mp = await import("/vendor/mediapipe/vision_bundle.mjs");
+      const files = await mp.FilesetResolver.forVisionTasks("/vendor/mediapipe/wasm");
+      const mk = (C, path, extra) => C.createFromOptions(files, { baseOptions: { modelAssetPath: path, delegate: "GPU" }, runningMode: "VIDEO", ...extra })
+        .catch(() => C.createFromOptions(files, { baseOptions: { modelAssetPath: path, delegate: "CPU" }, runningMode: "VIDEO", ...extra }));
+      pose = await mk(mp.PoseLandmarker, "/vendor/mediapipe/models/pose_landmarker_lite.task", { numPoses: 1 });
+      hands = await mk(mp.HandLandmarker, "/vendor/mediapipe/models/hand_landmarker.task", { numHands: 2 });
+      HAND = mp.HandLandmarker.HAND_CONNECTIONS.map(c => [c.start, c.end]);
+      loop();
+    } catch (e) { console.warn("tracking unavailable:", e); log("tracking unavailable: " + e.message); }
+  }
+  function size() {
+    const r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
+    if (cv.width !== Math.round(r.width * d)) { cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
+    return r;
+  }
+  // landmark (0..1 of the video frame) -> canvas pixels, matching object-fit:cover and the mirrored preview
+  function mapper(r) {
+    const vw = video.videoWidth, vh = video.videoHeight, k = Math.max(r.width / vw, r.height / vh);
+    const dx = (r.width - vw * k) / 2, dy = (r.height - vh * k) / 2;
+    return (p) => [r.width - (p.x * vw * k + dx), p.y * vh * k + dy];
+  }
+  function bracketBox(x, y, w, h, col) {
+    const L = Math.min(w, h) * 0.22;
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.beginPath();
+    for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
+      ctx.moveTo(cx + sx * L, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy * L);
+    }
+    ctx.stroke();
+    ctx.font = "500 14px Geist, Arial, sans-serif";
+    const label = "Person in view", tw = ctx.measureText(label).width;
+    ctx.fillStyle = "rgba(12,12,13,.72)"; ctx.beginPath(); ctx.roundRect(x, y - 30, tw + 20, 24, 7); ctx.fill();
+    ctx.fillStyle = "#F5F8F8"; ctx.fillText(label, x + 10, y - 13);
+  }
+  function loop() {
+    const cb = video.requestVideoFrameCallback ? (f) => video.requestVideoFrameCallback(f) : (f) => requestAnimationFrame(f);
+    cb(tick);
+  }
+  function tick() {
+    loop();
+    const r = size();
+    ctx.clearRect(0, 0, r.width, r.height);
+    if (!on || !pose || !video.videoWidth || document.hidden) return;
+    const t = performance.now();
+    if (t - last < 33) { draw(r); return; }            // about 30 detections a second at most
+    last = t; frameNo++;
+    const t0 = performance.now();
+    let pr = null, hr = null;
+    try { pr = pose.detectForVideo(video, t); if (!slow || frameNo % 2) hr = hands.detectForVideo(video, t + 0.1); } catch (_) { return; }
+    slow = performance.now() - t0 > 40;
+    const m = mapper(r);
+    const lm = pr && pr.landmarks && pr.landmarks[0];
+    if (lm) {
+      // face box from the head landmarks (nose, eyes, ears, mouth), smoothed
+      const head = lm.slice(0, 11).filter(p => (p.visibility ?? 1) > 0.4).map(m);
+      if (head.length >= 3) {
+        const xs = head.map(p => p[0]);
+        const nose = m(lm[0]), sh = (lm[11].visibility ?? 1) > 0.4 && (lm[12].visibility ?? 1) > 0.4 ? Math.hypot(...m(lm[11]).map((v, i) => v - m(lm[12])[i])) : 0;
+        const ear = [7, 8].filter(i => (lm[i].visibility ?? 1) > 0.4).map(i => m(lm[i]));
+        const earX = ear.length ? ear.reduce((a, p) => a + p[0], 0) / ear.length : nose[0];
+        const cx = (nose[0] * 2 + earX) / 3, cy = nose[1] - 6;
+        const w = Math.max(70, (Math.max(...xs) - Math.min(...xs)) * 1.6, sh * 0.5), h = w * 1.3;
+        const nb = { x: cx - w / 2, y: cy - h / 2 - h * 0.08, w, h };
+        face = face ? { x: face.x + (nb.x - face.x) * 0.35, y: face.y + (nb.y - face.y) * 0.35, w: face.w + (nb.w - face.w) * 0.35, h: face.h + (nb.h - face.h) * 0.35 } : nb;
+      } else face = null;
+      [15, 16].forEach((i, k) => { if ((lm[i].visibility ?? 1) > 0.5) { trails[k].push(m(lm[i])); if (trails[k].length > 26) trails[k].shift(); } else trails[k].length = 0; });
+      tick.arms = ARM.filter(([a, b]) => (lm[a].visibility ?? 1) > 0.5 && (lm[b].visibility ?? 1) > 0.5).map(([a, b]) => [m(lm[a]), m(lm[b])]);
+      tick.joints = [11, 12, 13, 14, 15, 16].filter(i => (lm[i].visibility ?? 1) > 0.5).map(i => m(lm[i]));
+    } else { face = null; trails = [[], []]; tick.arms = []; tick.joints = []; }
+    if (hr) handPts = (hr.landmarks || []).map(h => h.map(m));
+    draw(r);
+  }
+  function draw(r) {
+    const col = accent(), calm = still();
+    // wrist trails
+    if (!calm) for (const tr of trails) {
+      for (let i = 1; i < tr.length; i++) {
+        ctx.strokeStyle = "rgba(232,180,188," + (i / tr.length * 0.85).toFixed(3) + ")"; ctx.lineWidth = 2 + i / tr.length * 5; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(tr[i - 1][0], tr[i - 1][1]); ctx.lineTo(tr[i][0], tr[i][1]); ctx.stroke();
+      }
+    }
+    // arms
+    ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.lineCap = "round";
+    for (const [a, b] of tick.arms || []) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    for (const [x, y] of tick.joints || []) { ctx.fillStyle = "#F5F8F8"; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 6.283); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.stroke(); }
+    // hands
+    for (const h of handPts) {
+      ctx.strokeStyle = "rgba(245,248,248,.8)"; ctx.lineWidth = 2;
+      for (const [a, b] of HAND) { ctx.beginPath(); ctx.moveTo(h[a][0], h[a][1]); ctx.lineTo(h[b][0], h[b][1]); ctx.stroke(); }
+      for (const i of [4, 8, 12, 16, 20]) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(h[i][0], h[i][1], 4.5, 0, 6.283); ctx.fill(); }
+    }
+    if (face) bracketBox(face.x, face.y, face.w, face.h, "#F5F8F8");
+    // pulses at the hands when a step counts (green) or an alert fires (burgundy)
+    const now = performance.now();
+    pulses = pulses.filter(p => now - p.t < 900);
+    for (const p of pulses) {
+      const k = (now - p.t) / 900;
+      ctx.strokeStyle = p.c.replace("A", (1 - k).toFixed(2)); ctx.lineWidth = 4 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 18 + k * 70, 0, 6.283); ctx.stroke();
+    }
+  }
+  function pulse(c) {
+    if (still()) return;
+    const pts = handPts.length ? handPts.map(h => h[9]) : (trails[0].length || trails[1].length) ? [trails[0].at(-1), trails[1].at(-1)].filter(Boolean) : [];
+    for (const [x, y] of pts) pulses.push({ x, y, t: performance.now(), c });
+  }
+  return {
+    start() { if (on) load(); },
+    set(v) { on = v; if (v) load(); else ctx.clearRect(0, 0, cv.width, cv.height); },
+    done() { pulse("rgba(124,199,154,A)"); },
+    alert() { pulse("rgba(232,90,110,A)"); },
+  };
+})();
+
 // ---------- starfield ----------
 const Sky = (() => {
   const cv = $("sky"), ctx = cv.getContext("2d");
@@ -1245,6 +1407,13 @@ $("themeBtn").onclick = () => {
 };
 showThemePref();
 addEventListener("themechange", () => { try { Sky.recolor(); } catch (_) {} });
+$("trackBtn").onclick = () => {
+  const v = $("trackBtn").getAttribute("aria-pressed") !== "true";
+  $("trackBtn").setAttribute("aria-pressed", String(v));
+  Tracker.set(v);
+  try { localStorage.setItem("showunce-track", v ? "1" : "0"); } catch (_) {}
+};
+try { if (localStorage.getItem("showunce-track") === "0") { $("trackBtn").setAttribute("aria-pressed", "false"); Tracker.set(false); } } catch (_) {}
 $("bigBtn").onclick = () => setBig($("bigBtn").getAttribute("aria-pressed") !== "true");
 $("alertClose").onclick = hideAlert;
 $("sayEach").onchange = () => { try { localStorage.setItem("showonce-say", $("sayEach").checked ? "1" : "0"); } catch (_) {} };

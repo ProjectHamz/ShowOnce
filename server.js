@@ -29,6 +29,7 @@ const ai = new GoogleGenAI({ apiKey: KEY });
 const app = express();
 app.use(express.json({ limit: "120mb" }));
 app.use(express.static(path.join(ROOT, "public")));
+app.get("/app", (req, res) => res.sendFile(path.join(ROOT, "public", "app.html")));
 
 // ---------- helpers ----------
 // VERIFY content-block shape (see CLAUDE.md). Must match the shape that works in smoke.js (default "a").
@@ -207,8 +208,8 @@ They did one hands-on action that is not part of the procedure. Name that action
 }));
 
 // ---------- POST /api/speak : text -> natural voice (Gemini TTS), cached by text ----------
-const TTS_MODEL = process.env.TTS_MODEL || "gemini-3.8-flash-lite-tts";
-const TTS_VOICE = process.env.TTS_VOICE || "Kore";
+const TTS_MODEL = process.env.TTS_MODEL || "gemini-3.8-flash-tts";
+const TTS_VOICE = process.env.TTS_VOICE || "Sulafat";
 const ttsCache = new Map();
 app.post("/api/speak", route("speak", async ({ text }) => {
   const line = String(text || "").trim().slice(0, 300);
@@ -220,7 +221,8 @@ app.post("/api/speak", route("speak", async ({ text }) => {
         method: "POST",
         headers: { "x-goog-api-key": KEY, "content-type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Say calmly and clearly: ${line}` }] }],
+          // Send only the sentence: this model reads any instruction text out loud.
+          contents: [{ parts: [{ text: line }] }],
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: TTS_VOICE } } } },
         }),
       });

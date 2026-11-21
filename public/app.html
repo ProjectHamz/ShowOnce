@@ -211,16 +211,13 @@
   .setmenu button.calm[aria-pressed="true"] .sq::after { content:""; position:absolute; left:5px; top:1px; width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(45deg); }
   #themeBtn .sq { border-radius:50%; }
 
-  /* ---------- mode dock: notebook index tabs ---------- */
-  .tabs { background:none; border:0; padding:0; gap:4px; align-items:flex-end; border-radius:0; }
-  .tab { height:46px; padding:0 18px 0 14px; border-radius:14px 14px 5px 5px; color:#2A2D14; background:#D9DBB8; box-shadow:0 2px 0 rgba(0,0,0,.28); transform:translateY(5px); opacity:.88; transition:transform .45s var(--spring), opacity .3s, background-color .3s; }
-  .tab[data-tab="watch"] { background:#F3D3DA; color:#4A1420; }
-  .tab[data-tab="save"] { background:#FAF8F1; color:var(--ink); }
-  .tab:hover:not(:disabled) { transform:translateY(1px); opacity:1; color:inherit; }
-  .tab[aria-current="page"] { transform:translateY(-2px); opacity:1; height:52px; }
-  .tab[aria-current="page"][data-tab="teach"] { background:#C9CD8F; color:#1E2010; }
-  .tab[aria-current="page"][data-tab="watch"] { background:#E8B4BC; color:#3A0F19; }
-  .tab[aria-current="page"][data-tab="save"] { background:#FFFFFF; color:var(--ink); }
+  /* ---------- mode switch: one paper bar, a colored marker slides to the active mode ---------- */
+  .tabs { background:#FAF8F1; border:0; padding:5px; gap:0; border-radius:16px; box-shadow:0 2px 0 rgba(0,0,0,.25); }
+  .tabs::before { content:""; position:absolute; top:5px; bottom:5px; left:0; width:var(--seg-w, 0px); transform:translateX(var(--seg-x, 0px)); border-radius:12px; background:var(--seg-c, #C9CD8F); transition:transform .55s var(--spring), width .45s var(--ease), background-color .4s; }
+  body[data-tab="teach"] .tabs { --seg-c:#C9CD8F; } body[data-tab="watch"] .tabs { --seg-c:#E8B4BC; } body[data-tab="save"] .tabs { --seg-c:#E4E3D8; }
+  .tab, .tab[aria-current="page"] { position:relative; z-index:1; height:46px; padding:0 18px 0 14px; border-radius:12px; background:transparent; color:#3E423F; }
+  .tab[aria-current="page"] { color:#1B1F1E; }
+  .tab:hover:not(:disabled):not([aria-current="page"]) { color:#1B1F1E; background:rgba(27,31,30,.06); }
   .tab .lbl { font-weight:600; }
 
   /* ---------- the step sheet: a notebook page ---------- */
@@ -562,6 +559,14 @@ function log(msg, cls = "e-info") {
 }
 
 // ---------- tabs + camera button ----------
+function placeSeg() {
+  const t = document.querySelector('.tab[aria-current="page"]'), bar = document.querySelector(".tabs");
+  if (!t) return;
+  bar.style.setProperty("--seg-x", t.offsetLeft + "px");
+  bar.style.setProperty("--seg-w", t.offsetWidth + "px");
+}
+addEventListener("resize", placeSeg);
+if (document.fonts) document.fonts.ready.then(placeSeg);
 function setTab(t) {
   if (t === "teach" && (running || finishing)) return;
   tab = t;
@@ -572,6 +577,7 @@ function setTab(t) {
   document.querySelectorAll(".step .nm").forEach(el => { el.contentEditable = t === "teach" ? "plaintext-only" : "false"; });
   try { Sky.recolor(); } catch (_) {}
   const rail = $("panel"); rail.classList.remove("swap"); void rail.offsetWidth; rail.classList.add("swap");
+  placeSeg();
   updateCam();
 }
 
@@ -1293,49 +1299,111 @@ const Logo = (() => {
 })();
 
 // ---------- tracking: face box, arm tracing and hand joints, all on this device ----------
-// MediaPipe Pose (lite) and Hand Landmarker run in the browser from /vendor. Nothing is sent anywhere,
-// nobody is identified: the box only says a person is in view.
+// MediaPipe Pose (lite) and Hand Landmarker run in a Web Worker (/track-worker.js) on small
+// frames, so the page never waits on them. Landmarks are smoothed with a One Euro filter
+// (Casiez et al.) and pushed forward by their velocity to hide the model's delay.
+// Nothing is sent anywhere and nobody is identified: the box only says a person is in view.
 const Tracker = (() => {
   const cv = $("track"), ctx = cv.getContext("2d"), video = $("preview");
-  let pose = null, hands = null, on = true, loading = false, frameNo = 0, nextAt = 0, ema = 0;
-  function autoOff() {
-    on = false; ctx.clearRect(0, 0, cv.width, cv.height);
-    $("trackBtn").setAttribute("aria-pressed", "false");
-    log("tracking switched off: this computer is too slow to run it alongside the checks");
-    announce("Tracking switched off to keep the app fast.");
-  }
-  let face = null, trails = [[], []], pulses = [], handPts = [];
+  let worker = null, ready = false, busy = false, on = true, HAND = [], sentAt = 0, forceCpu = /[?&]cpu\b/.test(location.search);
+  let poseF = null, handsF = [], resT = 0, resAt = 0, face = null, trails = [[], []], pulses = [];
+  let poseFilt = [], handFilt = [];
   const ARM = [[11, 13], [13, 15], [12, 14], [14, 16], [11, 12], [11, 23], [12, 24]];
-  let HAND = [];
   const still = () => document.body.classList.contains("calm") || matchMedia("(prefers-reduced-motion: reduce)").matches;
   const accent = () => getComputedStyle(document.body).getPropertyValue("--accent").trim() || "#E8B4BC";
-  async function load() {
-    if (loading || pose) return; loading = true;
-    try {
-      const mp = await import("/vendor/mediapipe/vision_bundle.mjs");
-      const files = await mp.FilesetResolver.forVisionTasks("/vendor/mediapipe/wasm");
-      const mk = (C, path, extra) => C.createFromOptions(files, { baseOptions: { modelAssetPath: path, delegate: "GPU" }, runningMode: "VIDEO", ...extra })
-        .catch(() => C.createFromOptions(files, { baseOptions: { modelAssetPath: path, delegate: "CPU" }, runningMode: "VIDEO", ...extra }));
-      pose = await mk(mp.PoseLandmarker, "/vendor/mediapipe/models/pose_landmarker_lite.task", { numPoses: 1 });
-      hands = await mk(mp.HandLandmarker, "/vendor/mediapipe/models/hand_landmarker.task", { numHands: 2 });
-      HAND = mp.HandLandmarker.HAND_CONNECTIONS.map(c => [c.start, c.end]);
-      loop();
-    } catch (e) { console.warn("tracking unavailable:", e); log("tracking unavailable: " + e.message); }
+
+  // One Euro filter: low cutoff when slow (no jitter), higher cutoff when fast (no lag).
+  function oneEuro(minCut = 1.2, beta = 8, dCut = 1) {
+    let x = null, dx = 0, t = 0;
+    const alpha = (c, dt) => { const r = 2 * Math.PI * c * dt; return r / (r + 1); };
+    return (v, ts) => {
+      if (x === null) { x = v; t = ts; return [v, 0]; }
+      const dt = Math.max(0.001, (ts - t) / 1000); t = ts;
+      dx += alpha(dCut, dt) * ((v - x) / dt - dx);
+      x += alpha(minCut + beta * Math.abs(dx), dt) * (v - x);
+      return [x, dx];
+    };
   }
+  const filterPts = (bank, pts, ts) => pts.map((p, i) => {
+    const f = (bank[i] ||= { x: oneEuro(), y: oneEuro() });
+    const [x, vx] = f.x(p.x, ts), [y, vy] = f.y(p.y, ts);
+    return { x, y, vx, vy, v: p.v ?? 1 };
+  });
+
+  function init() {
+    if (worker) return;
+    try { worker = new Worker("/track-worker.js"); } catch (e) { log("tracking unavailable: " + e.message); return; }
+    worker.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === "ready") { const first = !draw.started; ready = true; HAND = m.handConnections; log("tracking ready (" + m.delegate + ")"); if (first) { draw.started = true; pump(); requestAnimationFrame(draw); } }
+      else if (m.type === "error") log("tracking unavailable: " + m.message);
+      else if (m.type === "result") { busy = false; onResult(m); }
+    };
+    worker.onerror = (e) => log("tracking unavailable: " + (e.message || "worker error"));
+    worker.postMessage({ type: "init", cpu: forceCpu });   // ?cpu forces the CPU path (for machines without a GPU)
+  }
+
+  // Send the newest camera frame (downscaled) whenever the worker is free; never queue frames.
+  function pump() {
+    const next = video.requestVideoFrameCallback ? (f) => video.requestVideoFrameCallback(f) : (f) => requestAnimationFrame(f);
+    next(async () => {
+      pump();
+      // watchdog: if the GPU path hangs, restart the worker on the CPU
+      if (busy && ready && performance.now() - sentAt > 2500) { worker.terminate(); worker = null; ready = false; busy = false; forceCpu = true; log("tracking: GPU too slow, switching to CPU"); init(); return; }
+      if (!on || !ready || busy || !video.videoWidth || document.hidden) return;
+      busy = true;
+      try {
+        const w = 384, h = Math.round(w * video.videoHeight / video.videoWidth);
+        const bitmap = await createImageBitmap(video, { resizeWidth: w, resizeHeight: h, resizeQuality: "low" });
+        sentAt = performance.now();
+        worker.postMessage({ type: "frame", bitmap, t: sentAt }, [bitmap]);
+      } catch (_) { busy = false; }
+    });
+  }
+
+  function onResult(m) {
+    if (!on) return;
+    resT = m.t; resAt = performance.now();
+    poseF = m.pose ? filterPts(poseFilt, m.pose, m.t) : (poseFilt = [], null);
+    if (m.hands.length !== handFilt.length) handFilt = m.hands.map(() => []);
+    handsF = m.hands.map((h, i) => filterPts(handFilt[i], h, m.t));
+    handSignals(m.hands, m.t);
+  }
+
+  // hands near the bottom edge most of the time means the table is cut off;
+  // fast hands that go still (or leave) mean something was just set down
+  let edge = [], lastPalm = null, lastT = 0, lastMoveAt = 0, wasMoving = false;
+  function handSignals(hl, t) {
+    if (typeof motionClip !== "undefined" && motionClip && hl.length) motionClip.hands++;
+    const low = hl.some(h => h[0].y > 0.9 || h.some(p => p.y > 0.98));
+    edge.push(hl.length ? low : null); if (edge.length > 90) edge.shift();
+    const seen = edge.filter(v => v !== null);
+    Framing.fromHands(seen.length > 20 && seen.filter(Boolean).length / seen.length > 0.5);
+    const palm = hl[0] ? hl[0][9] : null;
+    if (palm && lastPalm) {
+      const v = Math.hypot(palm.x - lastPalm.x, palm.y - lastPalm.y) / Math.max(1, t - lastT) * 1000;
+      if (v > 0.25) { lastMoveAt = t; wasMoving = true; }
+      else if (wasMoving && t - lastMoveAt > 500) { wasMoving = false; onHandsRelease(); }
+    }
+    if (!palm && lastPalm && wasMoving) { wasMoving = false; onHandsRelease(); }
+    lastPalm = palm; lastT = t;
+  }
+
   function size() {
     const r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
     if (cv.width !== Math.round(r.width * d)) { cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); ctx.setTransform(d, 0, 0, d, 0, 0); }
     return r;
   }
-  // landmark (0..1 of the video frame) -> canvas pixels, matching object-fit:cover and the mirrored preview
-  function mapper(r) {
+  // landmark (0..1 of the frame) -> canvas pixels, matching object-fit:cover and the mirrored preview,
+  // moved forward by its velocity to cover the time since the frame was captured (at most 90 ms)
+  function mapper(r, lead) {
     const vw = video.videoWidth, vh = video.videoHeight, k = Math.max(r.width / vw, r.height / vh);
     const dx = (r.width - vw * k) / 2, dy = (r.height - vh * k) / 2;
-    return (p) => [r.width - (p.x * vw * k + dx), p.y * vh * k + dy];
+    return (p) => [r.width - ((p.x + p.vx * lead) * vw * k + dx), (p.y + p.vy * lead) * vh * k + dy];
   }
-  function bracketBox(x, y, w, h, col) {
+  function bracketBox(x, y, w, h) {
     const L = Math.min(w, h) * 0.22;
-    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.beginPath();
+    ctx.strokeStyle = "#F5F8F8"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.beginPath();
     for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
       ctx.moveTo(cx + sx * L, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy * L);
     }
@@ -1345,88 +1413,49 @@ const Tracker = (() => {
     ctx.fillStyle = "rgba(12,12,13,.72)"; ctx.beginPath(); ctx.roundRect(x, y - 30, tw + 20, 24, 7); ctx.fill();
     ctx.fillStyle = "#F5F8F8"; ctx.fillText(label, x + 10, y - 13);
   }
-  function loop() {
-    const cb = video.requestVideoFrameCallback ? (f) => video.requestVideoFrameCallback(f) : (f) => requestAnimationFrame(f);
-    cb(tick);
-  }
-  function tick() {
-    loop();
+
+  function draw() {
+    requestAnimationFrame(draw);
     const r = size();
     ctx.clearRect(0, 0, r.width, r.height);
-    if (!on || !pose || !video.videoWidth || document.hidden) return;
-    const t = performance.now();
-    // Budget: one model per pass (body, then hands), and wait about 3x as long as the last pass
-    // took, so tracking never starves the page. Too slow for long? Switch tracking off.
-    if (t < nextAt) { draw(r); return; }
-    frameNo++;
-    const t0 = performance.now();
-    let pr = null, hr = null;
-    try { if (frameNo % 2) pr = pose.detectForVideo(video, t); else hr = hands.detectForVideo(video, t); } catch (_) { return; }
-    const took = performance.now() - t0;
-    ema = ema ? ema * 0.85 + took * 0.15 : took;
-    nextAt = performance.now() + Math.max(45, took * 3);
-    if (frameNo > 30 && ema > 220) { autoOff(); return; }
-    if (!pr) { if (hr) { handPts = (hr.landmarks || []).map(h => h.map(mapper(r))); handSignals(hr.landmarks || [], t); } draw(r); return; }
-    const m = mapper(r);
-    const lm = pr && pr.landmarks && pr.landmarks[0];
+    if (!on || !video.videoWidth || performance.now() - resAt > 600) { face = null; return; }
+    const lead = Math.min(0.09, (performance.now() - resT) / 1000);
+    const m = mapper(r, lead), col = accent(), calm = still();
+    const lm = poseF, vis = (i) => lm && lm[i] && lm[i].v > 0.5;
     if (lm) {
-      // face box from the head landmarks (nose, eyes, ears, mouth), smoothed
-      const head = lm.slice(0, 11).filter(p => (p.visibility ?? 1) > 0.4).map(m);
+      // face box: centred between the nose and the ears, sized from the head and shoulders, smoothed
+      const head = lm.slice(0, 11).filter(p => p.v > 0.4).map(m);
       if (head.length >= 3) {
-        const xs = head.map(p => p[0]);
-        const nose = m(lm[0]), sh = (lm[11].visibility ?? 1) > 0.4 && (lm[12].visibility ?? 1) > 0.4 ? Math.hypot(...m(lm[11]).map((v, i) => v - m(lm[12])[i])) : 0;
-        const ear = [7, 8].filter(i => (lm[i].visibility ?? 1) > 0.4).map(i => m(lm[i]));
-        const earX = ear.length ? ear.reduce((a, p) => a + p[0], 0) / ear.length : nose[0];
-        const cx = (nose[0] * 2 + earX) / 3, cy = nose[1] - 6;
+        const xs = head.map(p => p[0]), nose = m(lm[0]);
+        const ears = [7, 8].filter(i => lm[i].v > 0.4).map(i => m(lm[i])[0]);
+        const earX = ears.length ? ears.reduce((a, b) => a + b, 0) / ears.length : nose[0];
+        const sh = vis(11) && vis(12) ? Math.hypot(m(lm[11])[0] - m(lm[12])[0], m(lm[11])[1] - m(lm[12])[1]) : 0;
         const w = Math.max(70, (Math.max(...xs) - Math.min(...xs)) * 1.6, sh * 0.5), h = w * 1.3;
-        const nb = { x: cx - w / 2, y: cy - h / 2 - h * 0.08, w, h };
-        face = face ? { x: face.x + (nb.x - face.x) * 0.35, y: face.y + (nb.y - face.y) * 0.35, w: face.w + (nb.w - face.w) * 0.35, h: face.h + (nb.h - face.h) * 0.35 } : nb;
+        const nb = { x: (nose[0] * 2 + earX) / 3 - w / 2, y: nose[1] - 6 - h / 2, w, h };
+        face = face ? { x: face.x + (nb.x - face.x) * 0.5, y: face.y + (nb.y - face.y) * 0.5, w: face.w + (nb.w - face.w) * 0.5, h: face.h + (nb.h - face.h) * 0.5 } : nb;
       } else face = null;
-      [15, 16].forEach((i, k) => { if ((lm[i].visibility ?? 1) > 0.5) { trails[k].push(m(lm[i])); if (trails[k].length > 26) trails[k].shift(); } else trails[k].length = 0; });
-      tick.arms = ARM.filter(([a, b]) => (lm[a].visibility ?? 1) > 0.5 && (lm[b].visibility ?? 1) > 0.5).map(([a, b]) => [m(lm[a]), m(lm[b])]);
-      tick.joints = [11, 12, 13, 14, 15, 16].filter(i => (lm[i].visibility ?? 1) > 0.5).map(i => m(lm[i]));
-    } else { face = null; trails = [[], []]; tick.arms = []; tick.joints = []; }
-    draw(r);
-  }
-  // hands near the bottom edge most of the time means the table is cut off;
-  // fast hands that go still (or leave) mean something was just set down
-  let edge = [], lastPalm = null, lastMoveAt = 0, wasMoving = false, handsSince = 0;
-  function handSignals(hl, t) {
-    if (typeof motionClip !== "undefined" && motionClip && hl.length) motionClip.hands++;
-    const low = hl.some(h => h[0].y > 0.9 || h.some(p => p.y > 0.98));
-    edge.push(hl.length ? low : null); if (edge.length > 90) edge.shift();
-    const seen = edge.filter(v => v !== null);
-    Framing.fromHands(seen.length > 20 && seen.filter(Boolean).length / seen.length > 0.5);
-    const palm = hl[0] ? hl[0][9] : null;
-    if (palm && lastPalm) {
-      const v = Math.hypot(palm.x - lastPalm.x, palm.y - lastPalm.y) / Math.max(1, t - (tick.lt || t)) * 1000;
-      if (v > 0.25) { lastMoveAt = t; wasMoving = true; }
-      else if (wasMoving && t - lastMoveAt > 500) { wasMoving = false; onHandsRelease(); }
-    }
-    if (!palm && lastPalm && wasMoving) { wasMoving = false; onHandsRelease(); }
-    lastPalm = palm; tick.lt = t;
-  }
-  function draw(r) {
-    const col = accent(), calm = still();
+      [15, 16].forEach((i, k) => { if (vis(i)) { trails[k].push(m(lm[i])); if (trails[k].length > 22) trails[k].shift(); } else trails[k].length = 0; });
+    } else { face = null; trails = [[], []]; }
     // wrist trails
-    if (!calm) for (const tr of trails) {
-      for (let i = 1; i < tr.length; i++) {
-        ctx.strokeStyle = "rgba(232,180,188," + (i / tr.length * 0.85).toFixed(3) + ")"; ctx.lineWidth = 2 + i / tr.length * 5; ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(tr[i - 1][0], tr[i - 1][1]); ctx.lineTo(tr[i][0], tr[i][1]); ctx.stroke();
-      }
+    if (!calm) for (const tr of trails) for (let i = 1; i < tr.length; i++) {
+      ctx.strokeStyle = "rgba(232,180,188," + (i / tr.length * 0.85).toFixed(3) + ")"; ctx.lineWidth = 2 + i / tr.length * 5; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(tr[i - 1][0], tr[i - 1][1]); ctx.lineTo(tr[i][0], tr[i][1]); ctx.stroke();
     }
     // arms
-    ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.lineCap = "round";
-    for (const [a, b] of tick.arms || []) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
-    for (const [x, y] of tick.joints || []) { ctx.fillStyle = "#F5F8F8"; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 6.283); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.stroke(); }
+    if (lm) {
+      ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.lineCap = "round";
+      for (const [a, b] of ARM) if (vis(a) && vis(b)) { const p = m(lm[a]), q = m(lm[b]); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+      for (const i of [11, 12, 13, 14, 15, 16]) if (vis(i)) { const [x, y] = m(lm[i]); ctx.fillStyle = "#F5F8F8"; ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 6.283); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.stroke(); }
+    }
     // hands
-    for (const h of handPts) {
-      ctx.strokeStyle = "rgba(245,248,248,.8)"; ctx.lineWidth = 2;
+    for (const hf of handsF) {
+      const h = hf.map(m);
+      ctx.strokeStyle = "rgba(245,248,248,.85)"; ctx.lineWidth = 2;
       for (const [a, b] of HAND) { ctx.beginPath(); ctx.moveTo(h[a][0], h[a][1]); ctx.lineTo(h[b][0], h[b][1]); ctx.stroke(); }
       for (const i of [4, 8, 12, 16, 20]) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(h[i][0], h[i][1], 4.5, 0, 6.283); ctx.fill(); }
     }
-    if (face) bracketBox(face.x, face.y, face.w, face.h, "#F5F8F8");
-    // pulses at the hands when a step counts (green) or an alert fires (burgundy)
+    if (face) bracketBox(face.x, face.y, face.w, face.h);
+    // pulses at the hands when a step counts (green) or an alert fires (red)
     const now = performance.now();
     pulses = pulses.filter(p => now - p.t < 900);
     for (const p of pulses) {
@@ -1434,15 +1463,16 @@ const Tracker = (() => {
       ctx.strokeStyle = p.c.replace("A", (1 - k).toFixed(2)); ctx.lineWidth = 4 * (1 - k) + 1;
       ctx.beginPath(); ctx.arc(p.x, p.y, 18 + k * 70, 0, 6.283); ctx.stroke();
     }
+    draw.m = m;
   }
   function pulse(c) {
-    if (still()) return;
-    const pts = handPts.length ? handPts.map(h => h[9]) : (trails[0].length || trails[1].length) ? [trails[0].at(-1), trails[1].at(-1)].filter(Boolean) : [];
+    if (still() || !draw.m) return;
+    const pts = handsF.length ? handsF.map(h => draw.m(h[9])) : trails.map(t => t.at(-1)).filter(Boolean);
     for (const [x, y] of pts) pulses.push({ x, y, t: performance.now(), c });
   }
   return {
-    start() { if (on) load(); },
-    set(v) { on = v; if (v) load(); else ctx.clearRect(0, 0, cv.width, cv.height); },
+    start() { if (on) init(); },
+    set(v) { on = v; if (v) init(); else ctx.clearRect(0, 0, cv.width, cv.height); },
     done() { pulse("rgba(124,199,154,A)"); },
     alert() { pulse("rgba(232,90,110,A)"); },
   };

@@ -1,4 +1,4 @@
-// Show Once — one Express server, 4 routes. See CLAUDE.md.
+// Showunce: one Express server, 4 routes. See CLAUDE.md.
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
@@ -206,6 +206,34 @@ They did one hands-on action that is not part of the procedure. Name that action
   return { what: /^unclear$/i.test(what) ? "" : what };
 }));
 
+// ---------- POST /api/speak : text -> natural voice (Gemini TTS), cached by text ----------
+const TTS_MODEL = process.env.TTS_MODEL || "gemini-3.8-flash-lite-tts";
+const TTS_VOICE = process.env.TTS_VOICE || "Kore";
+const ttsCache = new Map();
+app.post("/api/speak", route("speak", async ({ text }) => {
+  const line = String(text || "").trim().slice(0, 300);
+  if (!line) throw new Error("missing text");
+  if (!ttsCache.has(line)) {
+    ttsCache.set(line, (async () => {
+      // Plain REST: this SDK version mis-serializes speechConfig for the TTS models.
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": KEY, "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Say calmly and clearly: ${line}` }] }],
+          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: TTS_VOICE } } } },
+        }),
+      });
+      const resp = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(`TTS HTTP ${res.status}: ${resp.error?.message || ""}`);
+      const part = resp.candidates?.[0]?.content?.parts?.find((x) => x.inlineData);
+      if (!part) throw new Error("TTS returned no audio");
+      return { audio: part.inlineData.data, mime: part.inlineData.mimeType || "audio/wav" };
+    })().catch((e) => { ttsCache.delete(line); throw e; }));
+  }
+  return await ttsCache.get(line);
+}));
+
 // ---------- POST /api/alert : Carbon -> one spoken sentence ----------
 app.post("/api/alert", route("alert", async ({ kind, step, missed = [], steps = [] }) => {
   const order = steps.map((s, i) => `${i + 1}. ${s.name}`).join("\n");
@@ -233,4 +261,4 @@ app.post("/api/log", route("log", async ({ player = "", card = { type: "none" },
   return { ok: true, file: `${base}.json` };
 }));
 
-app.listen(PORT, () => console.log(`Show Once on http://localhost:${PORT}  (neon=${NEON_MODEL}, carbon=${CARBON_MODEL})`));
+app.listen(PORT, () => console.log(`Showunce on http://localhost:${PORT}  (neon=${NEON_MODEL}, carbon=${CARBON_MODEL}, voice=${TTS_MODEL}/${TTS_VOICE})`));

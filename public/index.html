@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0F0F10">
-<title>Show Once</title>
+<title>Showunce</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
 <style>
   :root {
     --night:#0F0F10; --star:#F5F8F8; --star-dim:rgba(245,248,248,.62); --star-line:rgba(245,248,248,.14);
@@ -34,7 +34,7 @@
 
   /* ---------- top bar / sidebar ---------- */
   .side { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; padding:calc(14px + var(--safe-t)) 16px 6px; color:var(--star); }
-  .mark { font-size:calc(24px * var(--t)); font-weight:500; letter-spacing:-.02em; margin:0; }
+  .mark { font-family:"Instrument Serif", "Iowan Old Style", Georgia, serif; font-weight:400; font-size:calc(34px * var(--t)); line-height:1; letter-spacing:-.015em; margin:0; }
   .calm { background:none; border:1px solid var(--star-line); color:var(--star-dim); border-radius:999px; min-height:44px; padding:8px 16px; font-size:calc(15px * var(--t)); cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
   .prefs { display:flex; flex-wrap:wrap; gap:8px; }
   .calm .sq { background:transparent; border:1px solid var(--star-dim); }
@@ -232,7 +232,7 @@
 
 <div class="app">
   <aside class="side">
-    <h1 class="mark">Show Once</h1>
+    <h1 class="mark">Showunce</h1>
     <nav class="tabs" aria-label="Sections">
       <button class="tab" data-tab="teach" id="tabTeach">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg>
@@ -576,6 +576,7 @@ function loadSteps() {
     if (!Array.isArray(arr) || !arr.length) throw new Error("need a non-empty steps array");
     steps = arr.map((s, i) => ({ id: s.id || ("s" + (i + 1)), name: String(s.name || ""), done_when: String(s.done_when || "") }));
     renderSteps();
+    if (typeof Voice !== "undefined") prepareVoice();
     $("loadStatus").textContent = steps.length + " steps ready.";
     return true;
   } catch (e) {
@@ -641,6 +642,61 @@ function hideAlert() {
   $("alert").setAttribute("aria-hidden", "true");
   $("alertClose").tabIndex = -1;
 }
+// ---------- voice: Gemini TTS, prepared ahead; best local voice if it isn't ready ----------
+const Voice = (() => {
+  const cache = new Map();           // text -> Promise<blob URL>
+  let audio = null, alerting = false, localVoice = null;
+  function pickLocal() {
+    const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+    const rank = v => /premium|enhanced|neural|natural/i.test(v.name) ? 0 : /google us english|samantha|ava|zoe|serena|daniel/i.test(v.name) ? 1 : v.localService ? 3 : 2;
+    localVoice = vs.sort((a, b) => rank(a) - rank(b))[0] || null;
+  }
+  try { pickLocal(); speechSynthesis.onvoiceschanged = pickLocal; } catch (_) {}
+  function fetchAudio(text) {
+    if (!cache.has(text)) {
+      cache.set(text, postJSON("/api/speak", { text }).then(j => {
+        const bin = atob(j.audio), u8 = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        return URL.createObjectURL(new Blob([u8], { type: j.mime || "audio/wav" }));
+      }).catch(e => { cache.delete(text); throw e; }));
+    }
+    return cache.get(text);
+  }
+  function stop() { try { speechSynthesis.cancel(); } catch (_) {} if (audio) { audio.pause(); audio = null; } }
+  function local(text, done) {
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      if (localVoice) u.voice = localVoice;
+      u.rate = 1.02; u.onend = done; u.onerror = done;
+      speechSynthesis.speak(u);
+    } catch (_) { done(); }
+  }
+  async function say(text, urgent) {
+    if (!urgent && alerting) return;          // never talk over an alert
+    if (urgent) stop();
+    alerting = !!urgent;
+    const done = () => { if (urgent) alerting = false; };
+    const timeout = new Promise(r => setTimeout(() => r(null), 1200));
+    let url = null;
+    try { url = await Promise.race([fetchAudio(text), timeout]); } catch (_) {}
+    if (!url) return local(text, done);
+    if (urgent) stop();
+    audio = new Audio(url); audio.onended = done; audio.onerror = done;
+    audio.play().catch(() => local(text, done));
+  }
+  function prepare(texts) { let i = 0; const next = () => { if (i < texts.length) fetchAudio(texts[i++]).catch(() => {}).finally(next); }; next(); next(); next(); }
+  return { say, prepare };
+})();
+function prepareVoice() {
+  const lines = [templateLine("extra", null, [])];
+  for (const s of steps) {
+    const one = [{ id: s.id, name: s.name }];
+    lines.push(templateLine("skip_or_order", null, one), templateLine("undone", null, one), templateLine("skipped", null, one));
+    if ($("sayEach").checked) lines.push(s.name + ", done.");
+  }
+  Voice.prepare(lines);
+}
+
 function showAlert(line, kind) {
   $("alertLine").textContent = line;
   $("alertKind").textContent = STR.kind[kind] || "Check the steps";
@@ -652,12 +708,7 @@ function showAlert(line, kind) {
   clearTimeout(showAlert._t);
   showAlert._t = setTimeout(hideAlert, 12000);
   try { if (!document.body.classList.contains("calm") && navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (_) {}
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(line);
-    u.rate = 1.05;
-    speechSynthesis.speak(u);
-  } catch (_) {}
+  Voice.say(line, true);
 }
 
 async function raiseAlert(kind, stepId, missedIds) {
@@ -918,6 +969,7 @@ function startRun() {
   $("runStatus").textContent = STR.watching + ", a clip every " + (CLIP_MS / 1000) + " s";
   $("saveStatus").textContent = "Set the card, then save.";
   log("run started, " + steps.length + " steps");
+  prepareVoice();
   updateCam();
   startClip();
 }
@@ -1012,8 +1064,7 @@ function updateCardUI() {
 
 // ---------- accessibility settings ----------
 function sayStep(text) {
-  if (!$("sayEach").checked) return;
-  try { const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; speechSynthesis.speak(u); } catch (_) {}
+  if ($("sayEach").checked) Voice.say(text, false);
 }
 function setBig(on) {
   document.body.classList.toggle("big", on);
@@ -1047,6 +1098,8 @@ const Sky = (() => {
       r: Math.random() < 0.12 ? rand(0.9, 1.5) : rand(0.35, 0.9),
       near: Math.random() < 0.3, ph: Math.random() * Math.PI * 2, sp: rand(0.4, 1.4),
     }));
+    // Slow drift, faster for near stars (parallax depth).
+    stars.forEach(s => { const k = s.near ? 1 : 0.4; s.vx = -0.010 * k * rand(0.8, 1.2); s.vy = -0.0035 * k * rand(0.8, 1.2); });
     stars.forEach(s => { s.bright = s.r > 0.9; });
     if (!raf) draw(performance.now());
   }
@@ -1054,6 +1107,14 @@ const Sky = (() => {
     const dt = Math.min(64, t - (last || t)); last = t;
     ctx.clearRect(0, 0, w, h);
     const moving = !calm && !reduce.matches;
+    // Drift runs under reduced motion too, at a quarter speed; Calm stops it.
+    if (!calm) {
+      const k = (reduce.matches ? 0.25 : 1) * dt;
+      for (const s of stars) {
+        s.x += s.vx * k; s.y += s.vy * k;
+        if (s.x < -4) s.x += w + 8; if (s.y < -4) s.y += h + 8;
+      }
+    }
     px += ((mx - 0.5) * 10 - px) * 0.05; py += ((my - 0.5) * 10 - py) * 0.05;
     if (!calm && glowX > -999) {
       const g = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, 160);

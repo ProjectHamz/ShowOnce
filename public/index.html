@@ -8,7 +8,7 @@
 <meta name="description" content="Step-by-step help for everyone, from your loved ones to your employees. Show a task once; Showunce watches the next person and speaks up when a step is missed.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Young+Serif&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --night:#0F0F10; --wine:#1B0E13; --moss:#17190F;
@@ -21,7 +21,7 @@
   * { box-sizing:border-box; }
   html, body { margin:0; overflow-x:clip; }
   html { scroll-behavior:smooth; scroll-padding-top:80px; }
-  body { background:var(--paper); color:var(--ink); font:18px/1.55 Geist, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+  body { background:var(--paper); color:var(--ink); font:18px/1.55 Figtree, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing:antialiased; }
   a { color:inherit; }
   :focus-visible { outline:2px solid var(--rose); outline-offset:3px; }
   .wrap { max-width:1200px; margin:0 auto; padding:0 max(20px, 4vw); }
@@ -32,7 +32,7 @@
   /* ---------- header ---------- */
   header { position:absolute; inset:0 0 auto; z-index:10; color:var(--star); }
   header .wrap { display:flex; align-items:center; gap:28px; height:76px; }
-  .mark { font-family:"Instrument Serif", Georgia, serif; font-size:34px; line-height:1; text-decoration:none; letter-spacing:-.015em; }
+  .mark { font-family:"Young Serif", Georgia, serif; font-size:34px; line-height:1; text-decoration:none; letter-spacing:-.015em; }
   .brand { display:inline-flex; align-items:center; gap:12px; }
   .eye { width:40px; height:40px; flex:none; overflow:visible; }
   .eye .vf { fill:none; stroke:currentColor; stroke-width:2; }
@@ -57,7 +57,7 @@
   .hero { position:relative; color:var(--star); background:linear-gradient(180deg, var(--night) 0%, var(--night) 55%, var(--wine) 100%); overflow:hidden; }
   .hero canvas { position:absolute; inset:0; width:100%; height:100%; }
   .hero .wrap { position:relative; display:grid; grid-template-columns:minmax(0, .95fr) minmax(0, 1.05fr); gap:clamp(28px, 5vw, 72px); align-items:center; padding-top:140px; padding-bottom:110px; min-height:min(100svh, 920px); }
-  h1 { font-weight:400; font-size:clamp(42px, 5.6vw, 76px); line-height:1; letter-spacing:-.035em; margin:0 0 24px; text-wrap:balance; }
+  h1 { font-family:"Young Serif", Georgia, serif; font-weight:400; font-size:clamp(40px, 5.2vw, 70px); line-height:1.04; letter-spacing:-.015em; margin:0 0 24px; text-wrap:balance; }
   .hero p.lede { font-size:clamp(18px, 1.6vw, 21px); color:var(--dim); max-width:34ch; margin:0 0 32px; }
   .hero .ctas { display:flex; flex-wrap:wrap; gap:12px; }
   .hero .facts { display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:36px; font-size:15px; color:var(--dim); }
@@ -94,7 +94,7 @@
 
   /* ---------- sections ---------- */
   section.band { padding:clamp(72px, 9vw, 128px) 0; }
-  h2 { font-weight:400; font-size:clamp(34px, 4vw, 52px); line-height:1.04; letter-spacing:-.03em; margin:0 0 36px; text-wrap:balance; }
+  h2 { font-family:"Young Serif", Georgia, serif; font-weight:400; font-size:clamp(32px, 3.6vw, 48px); line-height:1.08; letter-spacing:-.01em; margin:0 0 36px; text-wrap:balance; }
   .sub { color:var(--grey); max-width:52ch; margin:0 0 44px; }
   .reveal { opacity:0; transform:translateY(24px); transition:opacity .8s var(--ease), transform .8s var(--ease); }
   .reveal.in { opacity:1; transform:none; }
@@ -127,25 +127,26 @@
   .d-clips span.chk { border-color:var(--rose); color:var(--rose); }
   @keyframes pop { from { transform:scale(.6); opacity:0; } }
   .d-panel { position:relative; padding:24px 24px 28px; background:var(--card); }
-  .d-panel h3 { font-weight:400; font-size:28px; letter-spacing:-.02em; margin:0 0 6px; }
+  .d-panel h3 { font-family:"Young Serif", Georgia, serif; font-weight:400; font-size:26px; letter-spacing:-.01em; margin:0 0 6px; }
   .d-panel .prog { font-size:15px; color:var(--grey); margin:0 0 12px; }
   .d-steps { list-style:none; margin:0; padding:0; }
-  .d-steps li { display:grid; grid-template-columns:24px 1fr auto; gap:10px; align-items:center; padding:11px 0; border-top:1px solid var(--rule); font-size:17px; }
-  .d-steps .n { color:var(--grey); font-size:14px; position:relative; }
-  .d-steps svg { position:absolute; left:-3px; top:-4px; width:22px; height:22px; display:none; }
-  .d-steps svg path { fill:none; stroke:var(--pine); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:24; stroke-dashoffset:24; }
-  .d-steps li.done .n span { visibility:hidden; } .d-steps li.done svg { display:block; } .d-steps li.done svg path { animation:draw .6s var(--ease) forwards; }
+  .d-steps li { display:grid; grid-template-columns:24px minmax(0,1fr) auto; gap:12px; align-items:center; padding:11px 0; border-top:1px solid var(--rule); font-size:17px; font-weight:500; }
+  .d-steps .n { position:relative; width:22px; height:22px; border:2px solid var(--ink); border-radius:6px; display:grid; place-items:center; font-size:12px; font-weight:600; color:var(--grey); transition:background-color .35s var(--ease), border-color .35s; }
+  .d-steps svg { position:absolute; left:50%; top:50%; width:16px; height:16px; margin:-8px 0 0 -8px; display:none; }
+  .d-steps svg path { fill:none; stroke:#fff; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:24; stroke-dashoffset:24; }
+  .d-steps li.done .n { background:#2E6B4F; border-color:#2E6B4F; } .d-steps li.done .n span { visibility:hidden; } .d-steps li.done svg { display:block; } .d-steps li.done svg path { animation:draw .5s var(--ease) forwards; }
   @keyframes draw { to { stroke-dashoffset:0; } }
-  .d-steps .w { display:inline-flex; align-items:center; gap:7px; font-size:14px; color:var(--grey); }
-  .d-steps .w .sq { background:var(--rule); }
-  .d-steps li.done .w { color:light-dark(var(--pine), #7CC79A); } .d-steps li.done .w .sq { background:light-dark(var(--pine), #7CC79A); }
-  .d-steps svg path { stroke:light-dark(var(--pine), #7CC79A); }
-  .d-steps li.missed { color:var(--burgundy); } .d-steps li.missed .w { color:var(--burgundy); } .d-steps li.missed .w .sq { background:var(--burgundy); }
-  @media (prefers-color-scheme: dark) { .d-steps li.missed, .d-steps li.missed .w { color:var(--rose); } .d-steps li.missed .w .sq { background:var(--rose); } }
+  .d-steps .nm { background:linear-gradient(#2E6B4F, #2E6B4F) no-repeat 0 58% / 0 2px; transition:background-size .5s var(--ease) .15s, color .4s; }
+  .d-steps li.done .nm { background-size:100% 2px; color:var(--grey); }
+  .d-steps .w { font-family:Caveat, cursive; font-size:21px; font-weight:600; color:var(--grey); }
+  .d-steps .w .sq { display:none; }
+  .d-steps li.done .w { color:light-dark(#2E6B4F, #7CC79A); }
+  .d-steps li.missed .n { border-color:var(--burgundy); color:var(--burgundy); } .d-steps li.missed .nm, .d-steps li.missed .w { color:var(--burgundy); }
+  @media (prefers-color-scheme: dark) { .d-steps li.missed .n { border-color:var(--rose); color:var(--rose); } .d-steps li.missed .nm, .d-steps li.missed .w { color:var(--rose); } .d-steps .n { border-color:#EDEEEA; } }
   .d-alert { position:absolute; left:16px; right:16px; top:16px; z-index:2; background:var(--burgundy); color:#fff; border-radius:14px; padding:16px 18px; box-shadow:0 18px 40px rgba(0,0,0,.3); transform:translateY(calc(-100% - 30px)); transition:transform .7s var(--ease); }
   .d-alert.show { transform:none; }
   .d-alert .k { display:flex; align-items:center; gap:8px; font-size:13px; opacity:.85; }
-  .d-alert .l { font-size:22px; line-height:1.15; font-weight:500; margin-top:4px; }
+  .d-alert .l { font-family:"Young Serif", Georgia, serif; font-size:22px; line-height:1.2; margin-top:4px; }
   .wave { display:inline-flex; gap:3px; align-items:center; height:14px; margin-left:auto; }
   .wave i { width:3px; height:100%; background:#fff; border-radius:2px; animation:wave .9s ease-in-out infinite; transform-origin:center; }
   .wave i:nth-child(2) { animation-delay:.15s; } .wave i:nth-child(3) { animation-delay:.3s; } .wave i:nth-child(4) { animation-delay:.45s; }
@@ -160,7 +161,7 @@
   .how .w { background:var(--wine); color:#F6E9EC; }
   .how .c { background:var(--night); color:var(--star); }
   .how .num { font-size:15px; opacity:.7; }
-  .how h3 { font-weight:400; font-size:32px; letter-spacing:-.02em; margin:6px 0 10px; }
+  .how h3 { font-family:"Young Serif", Georgia, serif; font-weight:400; font-size:30px; letter-spacing:-.01em; margin:6px 0 10px; }
   .how p { margin:0; opacity:.78; font-size:17px; max-width:34ch; }
   .viz { margin-top:auto; padding-top:24px; }
   /* teach viz: recording + steps appearing */
@@ -196,7 +197,7 @@
 
   /* accessibility */
   .a11y { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:clamp(28px, 5vw, 80px); align-items:start; }
-  .bigA { font-family:"Instrument Serif", Georgia, serif; font-size:clamp(120px, 18vw, 240px); line-height:.8; color:var(--olive); display:inline-block; animation:grow 5s var(--ease) infinite alternate; transform-origin:left bottom; }
+  .bigA { font-family:"Young Serif", Georgia, serif; font-size:clamp(120px, 18vw, 240px); line-height:.8; color:var(--olive); display:inline-block; animation:grow 5s var(--ease) infinite alternate; transform-origin:left bottom; }
   @keyframes grow { from { transform:scale(.82); } to { transform:scale(1); } }
   .a11y ul { list-style:none; margin:0; padding:0; }
   .a11y li { display:flex; align-items:center; gap:14px; padding:16px 0; border-top:1px solid var(--rule); }
@@ -458,19 +459,19 @@ const STEPS = ["Open the bag", "Put on gloves", "Put glasses in bag", "Put tape 
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const ol = $("dSteps");
 function reset() {
-  ol.innerHTML = STEPS.map((s, i) => '<li id="ds' + i + '"><span class="n"><span>' + (i + 1) + "</span>" + CHECK + '</span><span>' + s + '</span><span class="w"><span class="sq"></span><span class="wt">Not yet</span></span></li>').join("");
+  ol.innerHTML = STEPS.map((s, i) => '<li id="ds' + i + '"><span class="n"><span>' + (i + 1) + "</span>" + CHECK + '</span><span><span class="nm">' + s + '</span></span><span class="w"><span class="sq"></span><span class="wt">not yet</span></span></li>').join("");
   $("dClips").innerHTML = ""; $("dClip").textContent = "0"; $("dLat").textContent = "–"; $("dProg").textContent = "0 of 5 steps done";
   $("dAlert").classList.remove("show"); $("dCam").classList.remove("checking");
 }
 function mark(i, cls, word) { const li = $("ds" + i); li.className = cls; li.querySelector(".wt").textContent = word; }
 let doneN = 0;
-function done(i) { mark(i, "done", "Done"); doneN++; $("dProg").textContent = doneN + " of 5 steps done"; }
+function done(i) { mark(i, "done", "done"); doneN++; $("dProg").textContent = doneN + " of 5 steps done"; }
 const hand = [[20, 12], [44, 40], [70, 14], [46, 42], [24, 18], [44, 40], [72, 22], [46, 42], [30, 20], [45, 38]];
 // each entry: [time in ms, action]
 const TL = [
   [0, () => { reset(); doneN = 0; }],
   [900, () => clip(1)], [1900, () => { clip(2); done(0); }],
-  [2900, () => clip(3)], [3900, () => { clip(4); done(2); mark(1, "missed", "Missed"); $("dAlert").classList.add("show"); }],
+  [2900, () => clip(3)], [3900, () => { clip(4); done(2); mark(1, "missed", "missed!"); $("dAlert").classList.add("show"); }],
   [6900, () => { clip(5); $("dAlert").classList.remove("show"); }], [7900, () => { clip(6); done(1); }],
   [8900, () => { clip(7); done(3); }], [9900, () => { clip(8); done(4); }], [12500, () => {}],
 ];
@@ -490,7 +491,7 @@ function play() {
   meterT = setInterval(() => { $("dMeter").style.width = (20 + Math.random() * 75) + "%"; }, 160);
 }
 function stop() { running = false; timers.forEach(clearTimeout); clearInterval(meterT); }
-function staticFrame() { reset(); doneN = 0; done(0); done(2); mark(1, "missed", "Missed"); $("dAlert").classList.add("show"); }
+function staticFrame() { reset(); doneN = 0; done(0); done(2); mark(1, "missed", "missed!"); $("dAlert").classList.add("show"); }
 const dObs = new IntersectionObserver(es => {
   if (calm || reduce.matches) { stop(); staticFrame(); return; }
   if (es[0].isIntersecting) play(); else stop();

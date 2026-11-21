@@ -5,8 +5,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GoogleGenAI } from "@google/genai";
 
+// Load KEY=VALUE lines from secrets.env (hackathon only; delete the file after the event).
+// A variable already set in the shell wins over the file.
+const SECRETS = path.join(path.dirname(fileURLToPath(import.meta.url)), "secrets.env");
+if (fs.existsSync(SECRETS)) {
+  for (const line of fs.readFileSync(SECRETS, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
+
 const KEY = process.env.GEMINI_API_KEY;
-if (!KEY) { console.error("Set GEMINI_API_KEY first."); process.exit(1); }
+if (!KEY) { console.error("Set GEMINI_API_KEY first (or put it in secrets.env)."); process.exit(1); }
 const NEON_MODEL = process.env.NEON_MODEL || "gemini-4-neon";
 const CARBON_MODEL = process.env.CARBON_MODEL || "gemini-4-carbon";
 const DECISION_MODEL = "gemini-decision-1";

@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Show Once</title>
+<style>
+  :root { --bg:#0f1115; --panel:#181b22; --line:#2a2f3a; --text:#e8eaf0; --muted:#8a91a3; --green:#22c55e; --red:#ef4444; --amber:#f59e0b; --blue:#3b82f6; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { display:flex; align-items:center; gap:16px; padding:12px 20px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:26px; letter-spacing:.5px; }
+  header .tag { color:var(--muted); font-size:15px; }
+  #alert { display:none; margin:12px 20px 0; padding:22px 28px; border-radius:12px; background:var(--red); color:#fff; font-size:40px; font-weight:800; line-height:1.15; box-shadow:0 0 0 4px rgba(239,68,68,.35); }
+  #alert.show { display:block; animation: pulse 1s ease-in-out 2; }
+  @keyframes pulse { 50% { transform: scale(1.015); } }
+  main { display:grid; grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.1fr); gap:16px; padding:16px 20px 32px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+  section h2 { margin:0 0 10px; font-size:15px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+  video { width:100%; border-radius:10px; background:#000; aspect-ratio:16/9; object-fit:cover; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
+  input, select, textarea { background:#0b0d11; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; }
+  textarea { width:100%; min-height:170px; font:13px/1.4 ui-monospace, Consolas, monospace; }
+  button { background:var(--blue); color:#fff; border:0; border-radius:8px; padding:10px 16px; font:600 16px system-ui, sans-serif; cursor:pointer; }
+  button.secondary { background:#2a2f3a; }
+  button.go { background:var(--green); color:#04140a; }
+  button.stop { background:var(--red); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .status { color:var(--muted); font-size:14px; }
+  .rec-dot { display:inline-block; width:12px; height:12px; border-radius:50%; background:var(--red); margin-right:6px; vertical-align:middle; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity:.2; } }
+  ol#stepList { list-style:none; margin:0; padding:0; counter-reset: s; }
+  ol#stepList li { counter-increment: s; display:flex; align-items:center; gap:14px; padding:14px 16px; margin-bottom:10px; border-radius:10px; background:#11141a; border:2px solid var(--line); font-size:28px; font-weight:700; transition: all .25s; }
+  ol#stepList li::before { content: counter(s); flex:0 0 46px; height:46px; border-radius:50%; display:grid; place-items:center; background:#2a2f3a; font-size:24px; }
+  ol#stepList li .dw { display:block; font-size:14px; font-weight:400; color:var(--muted); }
+  ol#stepList li .p { margin-left:auto; font:600 15px ui-monospace, Consolas, monospace; color:var(--muted); white-space:nowrap; }
+  ol#stepList li.done { border-color:var(--green); background:rgba(34,197,94,.12); }
+  ol#stepList li.done::before { background:var(--green); color:#04140a; content:"\2713"; }
+  ol#stepList li.missed { border-color:var(--red); background:rgba(239,68,68,.12); }
+  ol#stepList li.missed::before { background:var(--red); content:"!"; }
+  .stats { display:flex; gap:18px; font:600 15px ui-monospace, Consolas, monospace; color:var(--muted); margin-top:8px; }
+  .stats b { color:var(--text); }
+  #log { max-height:220px; overflow:auto; font:13px/1.5 ui-monospace, Consolas, monospace; background:#0b0d11; border-radius:8px; padding:8px 10px; margin:0; white-space:pre-wrap; }
+  #log .e-done { color:var(--green); } #log .e-alert { color:#ff8a8a; } #log .e-info { color:var(--muted); }
+  label { font-size:14px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Show Once</h1>
+  <span class="tag">Show it once. It watches the next person and calls out skipped, swapped, or extra steps.</span>
+</header>
+<div id="alert" role="alert"></div>
+
+<main>
+  <div>
+    <section>
+      <h2>Camera</h2>
+      <video id="preview" autoplay muted playsinline></video>
+      <div class="row">
+        <label for="player">Player</label>
+        <input id="player" placeholder="Name (outside player)" size="22">
+        <span id="camStatus" class="status">Starting camera…</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>1. Teach</h2>
+      <div class="row">
+        <button id="teachBtn">Record teaching</button>
+        <span id="teachStatus" class="status">Show the procedure once, then stop. Neon turns it into steps.</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Steps (JSON, editable)</h2>
+      <textarea id="stepsJson" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="loadBtn" class="secondary">Load steps</button>
+        <span id="loadStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>4. Save run</h2>
+      <div class="row">
+        <label for="cardType">Secret card</label>
+        <select id="cardType">
+          <option value="none">none</option>
+          <option value="skip">skip</option>
+          <option value="swap">swap</option>
+          <option value="extra">extra</option>
+        </select>
+        <select id="cardStep" title="Step"></select>
+        <select id="cardStep2" title="Second step (swap)"></select>
+      </div>
+      <div class="row">
+        <input id="cardNote" placeholder="Note (optional, e.g. what the extra action was)" style="flex:1">
+      </div>
+      <div class="row">
+        <button id="saveBtn" class="secondary" disabled>Save run</button>
+        <span id="saveStatus" class="status">Set the card after the run, then save.</span>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>3. Run</h2>
+      <div class="row">
+        <button id="startBtn" class="go">Start</button>
+        <button id="stopBtn" class="stop" disabled>Stop</button>
+        <span id="runStatus" class="status">Load steps, then Start.</span>
+      </div>
+      <div class="stats">
+        <span>clip <b id="clipNo">0</b></span>
+        <span>Decision latency <b id="lat">–</b> ms</span>
+        <span>avg <b id="latAvg">–</b> ms</span>
+        <span>in flight <b id="inflight">0</b></span>
+      </div>
+    </section>
+
+    <section>
+      <ol id="stepList"></ol>
+    </section>
+
+    <section>
+      <h2>Event log</h2>
+      <pre id="log"></pre>
+    </section>
+  </div>
+</main>
+
+<script>
+// ---- Tunables (raise CLIP_MS if Decision 1 latency > 4 s) ----
+const CLIP_MS = 4000;
+const DONE_P = 0.7;
+const EXTRA_P = 0.8;
+const EXTRA_COOLDOWN_MS = 10000;
+const ALERT_TIMEOUT_MS = 2500;
+const STOP_WAIT_MS = 6000;
+
+const DEFAULT_STEPS = [
+  { id: "s1", name: "Open the bag", done_when: "The bag is unzipped or opened and ready to receive items." },
+  { id: "s2", name: "Put on gloves", done_when: "Both hands are wearing gloves." },
+  { id: "s3", name: "Put glasses in bag", done_when: "The glasses are placed inside the bag." },
+  { id: "s4", name: "Put tape and charger in bag", done_when: "Both the tape and the charger are placed inside the bag." },
+  { id: "s5", name: "Put water bottle in bag and zip", done_when: "The water bottle is inside the bag and the bag is zipped closed." }
+];
+
+const $ = (id) => document.getElementById(id);
+let stream = null;
+let mimeType = "";
+let steps = [];
+
+// run state
+let running = false, finishing = false;
+let runStart = 0, clipIdx = 0, inflight = 0;
+let doneMap = {};          // id -> true
+let alertedMissed = new Set();
+let lastExtraAt = -Infinity;
+let events = [];
+let latencies = [];
+let clipRec = null, clipTimer = null;
+let fullRec = null, fullChunks = [], fullBlob = null;
+let lastP = {};            // id -> latest p
+
+// ---------- helpers ----------
+function pickMime() {
+  const opts = ["video/webm;codecs=vp8", "video/webm;codecs=vp9", "video/webm"];
+  for (const m of opts) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  return "";
+}
+function baseMime() { return (mimeType || "video/webm").split(";")[0]; }
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => { const s = String(r.result); resolve(s.slice(s.indexOf(",") + 1)); };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+async function postJSON(url, body, signal) {
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || json.error) throw new Error(json.error || ("HTTP " + res.status));
+  return json;
+}
+
+function now() { return Math.round(performance.now() - runStart); }
+function nameOf(id) { const s = steps.find(x => x.id === id); return s ? s.name : id; }
+
+function log(msg, cls = "e-info") {
+  const line = document.createElement("div");
+  line.className = cls;
+  const t = running || finishing ? (now() / 1000).toFixed(1) + "s " : "";
+  line.textContent = t + msg;
+  $("log").appendChild(line);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+// ---------- camera ----------
+async function initCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+    $("preview").srcObject = stream;
+    mimeType = pickMime();
+    $("camStatus").textContent = "Camera ready (" + (mimeType || "default codec") + ")";
+  } catch (e) {
+    $("camStatus").textContent = "Camera error: " + e.message;
+  }
+}
+
+function newRecorder() {
+  return mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+}
+
+// ---------- steps ----------
+function renderSteps() {
+  const ol = $("stepList");
+  ol.innerHTML = "";
+  for (const s of steps) {
+    const li = document.createElement("li");
+    li.id = "step-" + s.id;
+    li.innerHTML = '<div><span class="nm"></span><span class="dw"></span></div><span class="p"></span>';
+    li.querySelector(".nm").textContent = s.name;
+    li.querySelector(".dw").textContent = s.done_when || "";
+    ol.appendChild(li);
+  }
+  for (const sel of [$("cardStep"), $("cardStep2")]) {
+    sel.innerHTML = '<option value="">(step)</option>';
+    for (const s of steps) {
+      const o = document.createElement("option");
+      o.value = s.id; o.textContent = s.id + " " + s.name;
+      sel.appendChild(o);
+    }
+  }
+}
+
+function setStepClass(id, cls) {
+  const li = $("step-" + id);
+  if (li) { li.classList.remove("done", "missed"); if (cls) li.classList.add(cls); }
+}
+function setStepP(id, p) {
+  const li = $("step-" + id);
+  if (li) li.querySelector(".p").textContent = p == null ? "" : "p=" + p.toFixed(2);
+}
+
+function loadSteps() {
+  try {
+    const parsed = JSON.parse($("stepsJson").value);
+    const arr = Array.isArray(parsed) ? parsed : parsed.steps;
+    if (!Array.isArray(arr) || !arr.length) throw new Error("need a non-empty steps array");
+    steps = arr.map((s, i) => ({ id: s.id || ("s" + (i + 1)), name: String(s.name || ""), done_when: String(s.done_when || "") }));
+    renderSteps();
+    $("loadStatus").textContent = steps.length + " steps loaded.";
+    return true;
+  } catch (e) {
+    $("loadStatus").textContent = "Bad JSON: " + e.message;
+    return false;
+  }
+}
+
+// ---------- teach ----------
+let teachRec = null, teachChunks = [];
+async function toggleTeach() {
+  if (!stream) return;
+  if (!teachRec) {
+    teachChunks = [];
+    teachRec = newRecorder();
+    teachRec.ondataavailable = (e) => { if (e.data && e.data.size) teachChunks.push(e.data); };
+    teachRec.onstop = async () => {
+      const blob = new Blob(teachChunks, { type: baseMime() });
+      teachRec = null;
+      $("teachBtn").textContent = "Record teaching";
+      $("teachBtn").disabled = true;
+      $("teachStatus").textContent = "Sending " + Math.round(blob.size / 1024) + " KB to Neon…";
+      const t0 = performance.now();
+      try {
+        const video = await blobToBase64(blob);
+        const json = await postJSON("/api/plan", { video, mimeType: baseMime() });
+        $("stepsJson").value = JSON.stringify(json.steps, null, 2);
+        loadSteps();
+        $("teachStatus").textContent = "Neon returned " + json.steps.length + " steps in " + Math.round(performance.now() - t0) + " ms. Edit if needed.";
+      } catch (e) {
+        $("teachStatus").textContent = "Plan failed: " + e.message;
+      } finally {
+        $("teachBtn").disabled = false;
+      }
+    };
+    teachRec.start(1000);
+    $("teachBtn").innerHTML = '<span class="rec-dot"></span>Stop teaching';
+    $("teachStatus").textContent = "Recording… do the procedure once.";
+  } else {
+    teachRec.stop();
+  }
+}
+
+// ---------- alerts ----------
+function templateLine(kind, step, missed) {
+  if (kind === "skip_or_order") return "Hold on — you skipped " + missed.map(m => m.name).join(" and ") + ".";
+  if (kind === "extra") return "That step isn't part of the procedure.";
+  return "You never did: " + missed.map(m => m.name).join(", ") + ".";
+}
+
+function showAlert(line) {
+  const el = $("alert");
+  el.textContent = line;
+  el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+  clearTimeout(showAlert._t);
+  showAlert._t = setTimeout(() => el.classList.remove("show"), 7000);
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(line);
+    u.rate = 1.05;
+    speechSynthesis.speak(u);
+  } catch (_) {}
+}
+
+async function raiseAlert(kind, stepId, missedIds) {
+  const step = stepId ? { id: stepId, name: nameOf(stepId) } : null;
+  const missed = missedIds.map(id => ({ id, name: nameOf(id) }));
+  let line = null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ALERT_TIMEOUT_MS);
+  try {
+    const json = await postJSON("/api/alert", { kind, step, missed, steps }, ctrl.signal);
+    if (json.line && String(json.line).trim()) line = String(json.line).trim();
+  } catch (_) { /* timeout or error -> template */ }
+  clearTimeout(timer);
+  if (!line) line = templateLine(kind, step, missed);
+  showAlert(line);
+  log("ALERT " + kind + ": " + line, "e-alert");
+}
+
+function addEvent(kind, step, missed, p, ms) {
+  events.push({ t: now(), kind, step: step || null, missed: missed || [], p: p == null ? null : p, ms: ms == null ? null : ms });
+}
+
+// ---------- run loop ----------
+function startClip() {
+  if (!running) return;
+  const idx = ++clipIdx;
+  $("clipNo").textContent = idx;
+  const chunks = [];
+  const rec = newRecorder();
+  clipRec = rec;
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = () => { sendClip(idx, new Blob(chunks, { type: baseMime() })); };
+  rec.start();
+  clipTimer = setTimeout(() => {
+    if (rec.state === "recording") rec.stop();
+    startClip(); // next clip records while this one is checked
+  }, CLIP_MS);
+}
+
+async function sendClip(idx, blob) {
+  if (blob.size < 1000) return;
+  const pending = steps.filter(s => !doneMap[s.id]);
+  inflight++; $("inflight").textContent = inflight;
+  const t0 = performance.now();
+  try {
+    const clip = await blobToBase64(blob);
+    const json = await postJSON("/api/check", { clip, mimeType: baseMime(), steps: pending, allSteps: steps });
+    const ms = json.ms != null ? json.ms : Math.round(performance.now() - t0);
+    latencies.push(ms);
+    $("lat").textContent = ms;
+    $("latAvg").textContent = Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length);
+    applyAnswers(idx, json.answers || {}, ms);
+  } catch (e) {
+    log("clip " + idx + " check failed: " + e.message, "e-alert");
+  } finally {
+    inflight--; $("inflight").textContent = inflight;
+  }
+}
+
+function applyAnswers(idx, answers, ms) {
+  if (!running && !finishing) return;
+  // Answers may arrive out of order; applying them is still fine (done is monotonic).
+  const newlyDone = [];
+  for (const s of steps) {
+    const a = answers[s.id];
+    if (!a || typeof a.p !== "number") continue;
+    lastP[s.id] = a.p;
+    if (!doneMap[s.id]) setStepP(s.id, a.p);
+    if (!doneMap[s.id] && a.p >= DONE_P) {
+      doneMap[s.id] = true;
+      setStepClass(s.id, "done");
+      addEvent("done", s.id, [], a.p, ms);
+      log("clip " + idx + ": DONE " + s.name + " (p=" + a.p.toFixed(2) + ", " + ms + " ms)", "e-done");
+      newlyDone.push(s);
+    }
+  }
+  // skip / order: a done step with earlier undone steps
+  for (const s of newlyDone) {
+    const i = steps.findIndex(x => x.id === s.id);
+    const missed = steps.slice(0, i).filter(x => !doneMap[x.id] && !alertedMissed.has(x.id)).map(x => x.id);
+    if (missed.length) {
+      missed.forEach(id => { alertedMissed.add(id); setStepClass(id, "missed"); });
+      addEvent("skip_or_order", s.id, missed, answers[s.id].p, ms);
+      raiseAlert("skip_or_order", s.id, missed);
+    }
+  }
+  // un-mark "missed" styling for steps that later got done
+  for (const id of alertedMissed) if (doneMap[id]) setStepClass(id, "done");
+  // extra
+  const ex = answers.extra;
+  if (ex && typeof ex.p === "number" && ex.p >= EXTRA_P) {
+    const t = performance.now();
+    if (t - lastExtraAt >= EXTRA_COOLDOWN_MS) {
+      lastExtraAt = t;
+      addEvent("extra", null, [], ex.p, ms);
+      raiseAlert("extra", null, []);
+    } else {
+      log("clip " + idx + ": extra p=" + ex.p.toFixed(2) + " (cooldown)");
+    }
+  }
+}
+
+function startRun() {
+  if (!stream) { $("runStatus").textContent = "No camera."; return; }
+  if (!loadSteps()) { $("runStatus").textContent = "Fix the steps JSON first."; return; }
+  running = true; finishing = false;
+  runStart = performance.now();
+  clipIdx = 0; inflight = 0; doneMap = {}; alertedMissed = new Set(); lastExtraAt = -Infinity;
+  events = []; latencies = []; lastP = {}; fullBlob = null;
+  $("log").innerHTML = ""; $("lat").textContent = "–"; $("latAvg").textContent = "–";
+  $("alert").classList.remove("show");
+  steps.forEach(s => { setStepClass(s.id, null); setStepP(s.id, null); });
+
+  fullChunks = [];
+  fullRec = newRecorder();
+  fullRec.ondataavailable = (e) => { if (e.data && e.data.size) fullChunks.push(e.data); };
+  fullRec.start(1000);
+
+  $("startBtn").disabled = true; $("stopBtn").disabled = false; $("saveBtn").disabled = true;
+  $("teachBtn").disabled = true; $("loadBtn").disabled = true;
+  $("runStatus").innerHTML = '<span class="rec-dot"></span>Watching… clips every ' + (CLIP_MS / 1000) + " s";
+  $("saveStatus").textContent = "Set the card after the run, then save.";
+  log("run started, " + steps.length + " steps");
+  startClip();
+}
+
+async function stopRun() {
+  if (!running) return;
+  running = false; finishing = true;
+  $("stopBtn").disabled = true;
+  $("runStatus").textContent = "Finishing — waiting for last checks…";
+  clearTimeout(clipTimer);
+  if (clipRec && clipRec.state === "recording") clipRec.stop(); // last partial clip is still checked
+
+  const fullDone = new Promise(resolve => {
+    if (!fullRec || fullRec.state === "inactive") return resolve();
+    fullRec.onstop = () => resolve();
+    fullRec.stop();
+  });
+
+  const t0 = performance.now();
+  await new Promise(r => setTimeout(r, 300)); // let the last clip's onstop fire
+  while (inflight > 0 && performance.now() - t0 < STOP_WAIT_MS) await new Promise(r => setTimeout(r, 150));
+  await fullDone;
+  fullBlob = new Blob(fullChunks, { type: baseMime() });
+
+  const never = steps.filter(s => !doneMap[s.id]).map(s => s.id);
+  if (never.length) {
+    never.forEach(id => setStepClass(id, "missed"));
+    addEvent("skipped", null, never, null, null);
+    await raiseAlert("skipped", null, never);
+  } else {
+    log("all steps done");
+  }
+  finishing = false;
+  log("run stopped (" + events.length + " events)");
+  $("runStatus").textContent = "Stopped. " + steps.filter(s => doneMap[s.id]).length + "/" + steps.length + " steps done.";
+  $("startBtn").disabled = false; $("saveBtn").disabled = false;
+  $("teachBtn").disabled = false; $("loadBtn").disabled = false;
+}
+
+// ---------- save ----------
+async function saveRun() {
+  const type = $("cardType").value;
+  const card = { type };
+  if (type !== "none" && $("cardStep").value) card.step = $("cardStep").value;
+  if (type === "swap" && $("cardStep2").value) card.step2 = $("cardStep2").value;
+  if ($("cardNote").value.trim()) card.note = $("cardNote").value.trim();
+  $("saveBtn").disabled = true;
+  $("saveStatus").textContent = "Saving…";
+  try {
+    const body = { player: $("player").value.trim() || "anon", card, steps, events };
+    if (fullBlob && fullBlob.size) body.video = await blobToBase64(fullBlob);
+    const json = await postJSON("/api/log", body);
+    $("saveStatus").textContent = "Saved " + json.file;
+    log("saved " + json.file);
+  } catch (e) {
+    $("saveStatus").textContent = "Save failed: " + e.message;
+    $("saveBtn").disabled = false;
+  }
+}
+
+function updateCardUI() {
+  const t = $("cardType").value;
+  $("cardStep").style.display = t === "none" ? "none" : "";
+  $("cardStep2").style.display = t === "swap" ? "" : "none";
+}
+
+// ---------- wire up ----------
+$("stepsJson").value = JSON.stringify(DEFAULT_STEPS, null, 2);
+$("teachBtn").onclick = toggleTeach;
+$("loadBtn").onclick = loadSteps;
+$("startBtn").onclick = startRun;
+$("stopBtn").onclick = stopRun;
+$("saveBtn").onclick = saveRun;
+$("cardType").onchange = updateCardUI;
+loadSteps();
+updateCardUI();
+initCamera();
+</script>
+</body>
+</html>

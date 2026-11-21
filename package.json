@@ -1,0 +1,15 @@
+{
+  "name": "show-once",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "smoke": "node smoke.js",
+    "eval": "node eval.js"
+  },
+  "dependencies": {
+    "@google/genai": "^3.6.1",
+    "express": "^4.22.3"
+  }
+}

@@ -108,39 +108,102 @@ app.post("/api/plan", route("plan", async ({ video, mimeType }) => {
   return { steps };
 }));
 
-// ---------- POST /api/check : clip -> Decision 1 -> per-step probabilities ----------
-app.post("/api/check", route("check", async ({ clip, mimeType, steps = [], allSteps = [] }) => {
-  if (!clip) throw new Error("missing clip");
+// ---------- POST /api/check : window of 1-2 clips -> Decision 1 -> probabilities ----------
+// The client sends the newest clip plus the one before it, so a step that crosses a clip
+// boundary is seen whole. If the API refuses multi-block input, fall back to fewer blocks.
+const INPUT_MODES = ["text+prev+clip", "prev+clip", "clip"];
+let inputMode = 0;
+function buildInput(mode, clip, prevClip, mime, n) {
+  const blocks = [];
+  if (mode === "text+prev+clip") blocks.push({ type: "text", text: prevClip
+    ? `Two consecutive ${n}-second clips from one fixed camera, oldest first. Judge what happens across both clips together.`
+    : `One ${n}-second clip from a fixed camera.` });
+  if (prevClip && mode !== "clip") blocks.push(videoBlock(stripPrefix(prevClip), mime));
+  blocks.push(videoBlock(stripPrefix(clip), mime));
+  return blocks;
+}
+const isInputError = (e) => /HTTP 400/.test(e.message) && /input|content|block|type|text|video/i.test(e.message);
+
+function checkQuestions(steps, doneSteps, allSteps) {
   const questions = {};
   for (const s of steps) {
     questions[s.id] = {
       type: "noul",
-      instructions: `Is step "${s.name}" completed in this clip? Done when: ${s.done_when}`,
+      instructions: `Does the video show the step "${s.name}" being finished? It counts as finished when: ${s.done_when}. Only the visible end state counts: reaching for, holding, or moving toward the object is not enough.`,
       criteria: {
-        true_description: `The clip shows the step "${s.name}" being completed: ${s.done_when}`,
-        false_description: `The clip does not show the step "${s.name}" being completed.`,
+        true_description: `"${s.name}" is completed in the video: ${s.done_when}`,
+        false_description: `"${s.name}" is not completed in the video (not started, only started, or not visible).`,
       },
     };
   }
-  const known = (allSteps.length ? allSteps : steps).map((s) => s.name).join("; ");
+  for (const s of doneSteps) {
+    questions["undo_" + s.id] = {
+      type: "noul",
+      instructions: `Earlier, the step "${s.name}" was finished (${s.done_when}). Does the video show that result being clearly reversed, for example the item taken back out or put back where it was?`,
+      criteria: {
+        true_description: `The result of "${s.name}" is clearly reversed in the video.`,
+        false_description: `The result of "${s.name}" stays as it was, or it is not visible.`,
+      },
+    };
+  }
+  const known = allSteps.map((s, i) => `${i + 1}. ${s.name}`).join("; ");
   questions.extra = {
     type: "noul",
-    instructions: `Does the person do a clear hands-on action that is NOT any of these steps: ${known}?`,
+    instructions: `The procedure is: ${known}. Does the person do a deliberate hands-on action with an object that is not part of any of these steps? Do not count: reaching for or handling the objects these steps use, adjusting grip, moving between steps, repeating a listed step, gestures, talking, or idle movement.`,
     criteria: {
-      true_description: "A deliberate hands-on action with an object that is not one of the listed steps.",
-      false_description: "Only listed steps, idle movement, or nothing happens.",
+      true_description: "A deliberate action with an object that belongs to none of the listed steps (for example adding an item that is not in the procedure).",
+      false_description: "Only listed steps, preparation for them, idle movement, or nothing happens.",
     },
   };
+  questions.present = {
+    type: "noul",
+    instructions: "Are a person's hands or body visible in the video for most of its length?",
+    criteria: { true_description: "Hands or a person are visible most of the time.", false_description: "No person or hands are visible for most of the video." },
+  };
+  return questions;
+}
+
+app.post("/api/check", route("check", async ({ clip, prevClip, mimeType, clipSeconds = 4, steps = [], doneSteps = [], allSteps = [] }) => {
+  if (!clip) throw new Error("missing clip");
+  const mime = mimeType || "video/webm";
+  const questions = checkQuestions(steps, doneSteps, allSteps.length ? allSteps : steps);
   const t0 = Date.now();
-  const answers = await decide([videoBlock(stripPrefix(clip), mimeType || "video/webm")], questions);
+  let answers;
+  for (;;) {
+    try {
+      answers = await decide(buildInput(INPUT_MODES[inputMode], clip, prevClip, mime, clipSeconds), questions);
+      break;
+    } catch (e) {
+      if (isInputError(e) && inputMode < INPUT_MODES.length - 1) {
+        inputMode++;
+        console.warn(`[check] input refused, falling back to "${INPUT_MODES[inputMode]}": ${e.message.slice(0, 160)}`);
+        continue;
+      }
+      throw e;
+    }
+  }
   const ms = Date.now() - t0;
   const out = {};
   for (const k of Object.keys(questions)) {
     const a = answers[k] || {};
     out[k] = { p: typeof a.noul === "number" ? a.noul : null, confidence: a.confidence ?? null };
   }
-  console.log(`[check] decision ${ms} ms, ${Object.keys(questions).length} questions`);
-  return { answers: out, ms };
+  console.log(`[check] decision ${ms} ms, ${Object.keys(questions).length} questions, input=${INPUT_MODES[inputMode]}`);
+  return { answers: out, ms, input: INPUT_MODES[inputMode] };
+}));
+
+// ---------- POST /api/describe : name the extra action (Neon, after the alert fired) ----------
+app.post("/api/describe", route("describe", async ({ clip, prevClip, mimeType, steps = [] }) => {
+  if (!clip) throw new Error("missing clip");
+  const mime = mimeType || "video/webm";
+  const parts = [];
+  if (prevClip) parts.push({ inlineData: { mimeType: mime, data: stripPrefix(prevClip) } });
+  parts.push({ inlineData: { mimeType: mime, data: stripPrefix(clip) } });
+  parts.push({ text: `These are consecutive clips of someone doing this procedure: ${steps.map((s, i) => `${i + 1}. ${s.name}`).join("; ")}.
+They did one hands-on action that is not part of the procedure. Name that action in at most 8 words, starting with a verb (for example "put a phone in the bag"). Describe the object and action only, never the person. If you can't see one, answer "unclear".` });
+  const resp = await ai.models.generateContent({ model: NEON_MODEL, contents: [{ role: "user", parts }] });
+  const what = String(resp.text || "").trim().split("\n")[0].replace(/^["']|["'.]$/g, "");
+  return { what: /^unclear$/i.test(what) ? "" : what };
 }));
 
 // ---------- POST /api/alert : Carbon -> one spoken sentence ----------
@@ -149,7 +212,7 @@ app.post("/api/alert", route("alert", async ({ kind, step, missed = [], steps = 
   const missedNames = missed.map((s) => s.name).join(", ") || "none";
   const prompt = `You voice short alerts for a procedure checker. Procedure:\n${order}\n
 Event: ${kind}. Step just seen: ${step ? step.name : "none"}. Steps not done yet: ${missedNames}.
-(skip_or_order = a later step was done before an earlier one; extra = an action not in the procedure; skipped = steps never done by the end.)
+(skip_or_order = a later step was done before an earlier one; extra = an action not in the procedure; undone = a finished step was reversed; skipped = steps never done by the end.)
 Write ONE short spoken sentence (max 15 words) about the procedure only. Neutral and helpful; never judge or describe the person. Plain text, no quotes.`;
   const resp = await ai.models.generateContent({ model: CARBON_MODEL, contents: [{ role: "user", parts: [{ text: prompt }] }] });
   const line = String(resp.text || "").trim().split("\n")[0].replace(/^["']|["']$/g, "");

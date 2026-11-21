@@ -30,7 +30,7 @@ const body = {
   questions: {
     person: {
       type: "noul",
-      question: "Is there a person visible in this clip?",
+      instructions: "Is there a person visible in this clip?",
       criteria: { true_description: "A person or part of a person (e.g. hands) is visible.", false_description: "No person is visible." },
     },
   },

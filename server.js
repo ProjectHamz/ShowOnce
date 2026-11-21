@@ -105,7 +105,7 @@ app.post("/api/check", route("check", async ({ clip, mimeType, steps = [], allSt
   for (const s of steps) {
     questions[s.id] = {
       type: "noul",
-      question: `Is step "${s.name}" completed in this clip? Done when: ${s.done_when}`,
+      instructions: `Is step "${s.name}" completed in this clip? Done when: ${s.done_when}`,
       criteria: {
         true_description: `The clip shows the step "${s.name}" being completed: ${s.done_when}`,
         false_description: `The clip does not show the step "${s.name}" being completed.`,
@@ -115,7 +115,7 @@ app.post("/api/check", route("check", async ({ clip, mimeType, steps = [], allSt
   const known = (allSteps.length ? allSteps : steps).map((s) => s.name).join("; ");
   questions.extra = {
     type: "noul",
-    question: `Does the person do a clear hands-on action that is NOT any of these steps: ${known}?`,
+    instructions: `Does the person do a clear hands-on action that is NOT any of these steps: ${known}?`,
     criteria: {
       true_description: "A deliberate hands-on action with an object that is not one of the listed steps.",
       false_description: "Only listed steps, idle movement, or nothing happens.",

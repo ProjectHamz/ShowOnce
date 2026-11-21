@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "smoke": "node smoke.js",
-    "eval": "node eval.js"
+    "start": "node --env-file-if-exists=.env server.js",
+    "smoke": "node --env-file-if-exists=.env smoke.js",
+    "eval": "node --env-file-if-exists=.env eval.js"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",

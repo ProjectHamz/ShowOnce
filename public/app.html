@@ -77,7 +77,7 @@
   @keyframes scan { from { transform:translateY(-100%); } to { transform:translateY(340%); } }
 
   /* top bar: logo + settings */
-  .top { position:absolute; z-index:5; left:38px; right:38px; top:32px; display:flex; align-items:center; gap:12px; color:var(--star); pointer-events:none; }
+  .top { position:absolute; z-index:8; left:38px; right:38px; top:32px; display:flex; align-items:center; gap:12px; color:var(--star); pointer-events:none; }
   .top > * { pointer-events:auto; }
   .brand { display:inline-flex; align-items:center; gap:12px; color:inherit; text-decoration:none; }
   .mark { font-family:"Young Serif", Georgia, serif; font-weight:400; font-size:calc(34px * var(--t)); line-height:1; letter-spacing:-.015em; margin:0; }
@@ -195,6 +195,55 @@
   .step.checking .st .w { color:var(--ink); }
   .panel[data-tab="teach"] .step .nm { background-size:0 2px; color:var(--ink); }
   .panel[data-tab="teach"] .step .num { background:#fff; border-color:var(--ink); color:var(--graphite); }
+
+  /* ---------- settings: one paper button, a checklist underneath ---------- */
+  .prefs { position:relative; }
+  .setbtn { display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 16px; border:0; border-radius:12px; background:#FAF8F1; color:var(--ink); font-weight:600; font-size:calc(15px * var(--t)); cursor:pointer; box-shadow:0 2px 0 rgba(0,0,0,.25); transition:transform .25s var(--spring); }
+  .setbtn:active { transform:translateY(2px); box-shadow:none; }
+  .setmenu { position:absolute; right:0; top:calc(100% + 10px); z-index:20; width:230px; background:#FAF8F1; border-radius:14px; padding:6px 14px; box-shadow:0 18px 40px rgba(0,0,0,.35); display:grid; animation:menuIn .35s var(--ease); }
+  .setmenu[hidden] { display:none; }
+  @keyframes menuIn { from { opacity:0; transform:translateY(-6px); } }
+  .setmenu button.calm { all:unset; box-sizing:border-box; display:flex; align-items:center; gap:12px; min-height:46px; color:var(--ink); font-size:calc(16px * var(--t)); cursor:pointer; border-bottom:1px solid #E2E1D6; }
+  .setmenu button.calm:last-child { border-bottom:0; }
+  .setmenu button.calm:focus-visible { outline:2px solid var(--ink); outline-offset:2px; border-radius:6px; }
+  .setmenu button.calm .sq { width:20px; height:20px; flex:0 0 20px; border:2px solid var(--ink); border-radius:6px; background:#fff; position:relative; }
+  .setmenu button.calm[aria-pressed="true"] .sq { background:var(--pine); border-color:var(--pine); }
+  .setmenu button.calm[aria-pressed="true"] .sq::after { content:""; position:absolute; left:5px; top:1px; width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(45deg); }
+  #themeBtn .sq { border-radius:50%; }
+
+  /* ---------- mode dock: notebook index tabs ---------- */
+  .tabs { background:none; border:0; padding:0; gap:4px; align-items:flex-end; border-radius:0; }
+  .tab { height:46px; padding:0 18px 0 14px; border-radius:14px 14px 5px 5px; color:#2A2D14; background:#D9DBB8; box-shadow:0 2px 0 rgba(0,0,0,.28); transform:translateY(5px); opacity:.88; transition:transform .45s var(--spring), opacity .3s, background-color .3s; }
+  .tab[data-tab="watch"] { background:#F3D3DA; color:#4A1420; }
+  .tab[data-tab="save"] { background:#FAF8F1; color:var(--ink); }
+  .tab:hover:not(:disabled) { transform:translateY(1px); opacity:1; color:inherit; }
+  .tab[aria-current="page"] { transform:translateY(-2px); opacity:1; height:52px; }
+  .tab[aria-current="page"][data-tab="teach"] { background:#C9CD8F; color:#1E2010; }
+  .tab[aria-current="page"][data-tab="watch"] { background:#E8B4BC; color:#3A0F19; }
+  .tab[aria-current="page"][data-tab="save"] { background:#FFFFFF; color:var(--ink); }
+  .tab .lbl { font-weight:600; }
+
+  /* ---------- the step sheet: a notebook page ---------- */
+  body { --sheet:#FAF8F1; --ruling:rgba(27,31,30,.16); --margin:rgba(109,31,46,.55); --hl:rgba(232,180,188,.75); }
+  body[data-tab="teach"] { --sheet:#F3F2E0; --ruling:rgba(107,111,58,.34); --hl:rgba(201,205,143,.85); }
+  body[data-tab="watch"] { --sheet:#FBEEF0; --ruling:rgba(109,31,46,.2); --hl:rgba(232,180,188,.8); }
+  ol#stepList { position:relative; background-color:var(--sheet); padding:30px 20px 8px 62px; border-radius:6px 6px 18px 18px; box-shadow:0 1px 0 rgba(0,0,0,.08), 0 14px 34px rgba(0,0,0,.28);
+    background-image:linear-gradient(90deg, transparent 47px, var(--margin) 47px, var(--margin) 49px, transparent 49px); transition:background-color .6s var(--ease); }
+  ol#stepList::before { content:""; position:absolute; left:18px; right:18px; top:9px; height:12px; background:radial-gradient(circle at 6px 6px, rgba(20,20,22,.78) 4.5px, transparent 5px) repeat-x; background-size:26px 12px; }
+  ol#stepList li { border-bottom:1px solid var(--ruling); grid-template-columns:28px minmax(0,1fr) auto; margin-left:-44px; padding-left:0; }
+  ol#stepList li:last-child { border-bottom:0; }
+  .step .num { background:#FFFFFF; }
+  .step .bar { display:none; }
+  .step .dw { color:var(--graphite); }
+  .step .ev { font-size:calc(12px * var(--t)); }
+  /* highlighter on the step to do next */
+  .step.next .nm { background:linear-gradient(100deg, transparent 0 2px, var(--hl) 2px calc(100% - 2px), transparent calc(100% - 2px)) no-repeat 0 85% / 100% 55%; }
+  /* a pen circle around a missed box */
+  .step .num::after { content:""; position:absolute; inset:-9px -11px; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 48'%3E%3Cpath d='M38 6C24 2 6 9 5 24s16 21 30 19 21-11 19-22C52 11 42 6 31 7' fill='none' stroke='%236D1F2E' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center/100% 100%; opacity:0; pointer-events:none; }
+  .step.missed .num::after { opacity:1; animation:penIn .5s var(--spring); }
+  @keyframes penIn { from { opacity:0; transform:scale(.6) rotate(-12deg); } }
+  .panel[data-tab="teach"] .step .num::after { display:none; }
+  .panel[data-tab="teach"] .step.next .nm { background:none; }
   .panel[data-tab="save"] #stepList { display:none; }
   .tips { list-style:none; margin:0 0 12px; padding:0; display:grid; gap:6px; }
   .tips li { display:flex; gap:12px; align-items:baseline; color:var(--graphite); font-size:calc(16px * var(--t)); }
@@ -297,10 +346,14 @@
       <span class="mark">Showunce</span>
     </a>
     <div class="prefs">
+      <button class="setbtn" id="setBtn" aria-expanded="false" aria-controls="setMenu">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</button>
+      <div class="setmenu" id="setMenu" hidden>
       <button class="calm" id="themeBtn"><span class="sq"></span><span id="themeLbl">Theme: auto</span></button>
       <button class="calm" id="trackBtn" aria-pressed="true"><span class="sq"></span>Tracking</button>
       <button class="calm" id="bigBtn" aria-pressed="false"><span class="sq"></span>Larger text</button>
       <button class="calm" id="calmBtn" aria-pressed="false"><span class="sq"></span>Calm</button>
+      </div>
     </div>
   </header>
 
@@ -311,6 +364,7 @@
     <div class="item"><span class="k">Average</span><span class="v" id="latAvg">–</span></div>
     <div class="item"><span class="k">Checking now</span><span class="v" id="inflight">0</span></div>
     <div class="item motion"><span class="k">Motion</span><span class="v"><span class="meter" aria-hidden="true"><i id="motionBar"></i></span> <span id="motionWord">Still</span></span></div>
+    <p class="dark" id="frameNote" role="note" hidden><span class="sq"></span>Tilt the camera down so the table is in view.</p>
     <p class="dark" id="darkNote" role="note" hidden><span class="sq"></span>Too dark to see. Turn on a light.</p>
     <div class="clips" id="clips" aria-hidden="true"></div>
     <span id="camStatus" class="sr"></span>
@@ -332,7 +386,7 @@
         <h2>Watch a run</h2>
         <p class="progress"><span id="progress"></span><span class="pbar" aria-hidden="true"><i id="pbar"></i></span></p>
         <label class="say"><input type="checkbox" id="sayEach"> Say each step out loud</label>
-        <details><summary>How it decides</summary><p>Every 3 seconds Gemini Decision 1 looks at the last 6 seconds. A step counts when it is 0.85 sure once, or 0.60 sure twice in a row.</p></details>
+        <details><summary>How it decides</summary><p>Every 3 seconds, and whenever your hands let go of something, Gemini Decision 1 looks at the last 6 seconds. It asks if each step was done and if its result is visible, and adds the answers up. The step it expects next needs less proof than one out of order.</p></details>
       </div>
       <div class="view" data-view="save" hidden>
         <h2>Save this run</h2>
@@ -398,6 +452,10 @@ const CLIP_MS = 3000;
 const DONE_P = 0.6;
 const SURE_P = 0.85;
 const CONFIRM_SPAN = 2;
+// Evidence adds up over checks (log-odds, older checks fade by DECAY each window).
+// The step you expect next needs NEED_NEXT; a step out of order needs NEED_OTHER.
+// Roughly: next step = one 0.80 answer or two 0.70s; out of order = one 0.92 or two 0.82s.
+const DECAY = 0.7, NEED_NEXT = 1.4, NEED_OTHER = 2.4, FLIP_BONUS = 1.0;
 const EXTRA_P = 0.75, EXTRA_SURE_P = 0.92;
 const UNDO_P = 0.8, UNDO_SURE_P = 0.93;
 const ABSENT_P = 0.2;
@@ -463,6 +521,8 @@ let lastP = {};            // id -> best p so far
 let hits = {}, undoHits = {}, extraHits = [];
 let clipStore = {}, results = {}, nextApply = 1, lastSentIdx = 0, absentRun = 0;
 let doneAt = {};           // id -> clip index of the first sighting that counted
+let score = {}, stateSeen = {}, surfaceRun = 0, clipStartAt = 0, releaseUsed = {};
+const logit = (p) => { const q = Math.min(0.99, Math.max(0.01, p)); return Math.log(q / (1 - q)); };
 
 // ---------- helpers ----------
 function pickMime() {
@@ -646,6 +706,8 @@ function updateProgress() {
   const n = steps.filter(s => doneMap[s.id]).length;
   $("progress").innerHTML = "<b>" + n + " of " + steps.length + "</b> steps done";
   $("pbar").style.width = (steps.length ? n / steps.length * 100 : 0) + "%";
+  const nx = steps.find(s => !doneMap[s.id]);
+  document.querySelectorAll("#stepList .step").forEach(li => li.classList.toggle("next", !!nx && li.id === "step-" + nx.id && hasRun));
   $("saveSummary").textContent = hasRun ? "Last run: " + n + " of " + steps.length + " steps done." : "No run yet. Watch a run first.";
 }
 
@@ -826,7 +888,8 @@ function startClip() {
   const idx = ++clipIdx;
   $("clipNo").textContent = idx;
   clipChip(idx, "rec", idx);
-  motionClip = { idx, moving: 0, frames: 0 };
+  motionClip = { idx, moving: 0, frames: 0, hands: 0 };
+  clipStartAt = performance.now();
   const chunks = [];
   const rec = newRecorder();
   clipRec = rec;
@@ -842,7 +905,7 @@ function startClip() {
 // One clip finished recording: keep it (it is the "previous clip" of the next window),
 // skip the API call only when the scene was completely still, then check the 2-clip window.
 async function handleClip(idx, blob, m) {
-  const active = !m || m.moving >= 2;          // unknown motion counts as active
+  const active = !m || m.moving >= 2 || m.hands >= 2;   // hands in view or unknown motion count as active
   if (blob.size < 1000) { results[idx] = { skipped: true }; clipChip(idx, "still", "–"); drainResults(); return; }
   const b64 = await blobToBase64(blob);
   clipStore[idx] = { b64, active };
@@ -902,38 +965,55 @@ function applyWindow(idx, answers, ms, active) {
   if (absentRun === 2) { log("clip " + idx + ": no one in view"); if (running) $("runStatus").textContent = STR.absent; }
   else if (absentRun === 0 && running && $("runStatus").textContent === STR.absent) $("runStatus").textContent = STR.watching + ", a clip every " + (CLIP_MS / 1000) + " s";
 
-  // Steps: count on one sure sighting or two nearby likely ones.
+  // Framing: is the surface where things get set down in view?
+  const sf = answers.surface && answers.surface.p;
+  surfaceRun = typeof sf === "number" && sf < 0.3 ? surfaceRun + 1 : 0;
+  Framing.fromModel(surfaceRun >= 2);
+
+  // Steps: evidence from "was it done?" and "is its result visible now?", added up over checks.
   const newlyDone = [];
   let anyStepSeen = false;
+  const nextId = (steps.find(x => !doneMap[x.id]) || {}).id;
   for (const s of steps) {
     if (doneMap[s.id]) continue;
-    const a = answers[s.id];
-    if (!a || typeof a.p !== "number") continue;
-    lastP[s.id] = Math.max(lastP[s.id] || 0, a.p);
+    const pa = answers[s.id] && typeof answers[s.id].p === "number" ? answers[s.id].p : null;
+    const ps = answers["state_" + s.id] && typeof answers["state_" + s.id].p === "number" ? answers["state_" + s.id].p : null;
+    if (pa == null && ps == null) continue;
+    const st = (stateSeen[s.id] ||= { low: false });
+    // The result only counts once we have seen it absent, or for the step we expect next
+    // (so leftovers from an earlier run don't count as done).
+    const useState = ps != null && (st.low || s.id === nextId);
+    let bonus = 0;
+    if (ps != null) {
+      if (ps <= 0.35) st.low = true;
+      else if (ps >= 0.7 && st.low) { bonus = FLIP_BONUS; st.low = false; log("clip " + idx + ": result appeared for " + s.name + " (" + ps.toFixed(2) + ")"); }
+    }
+    const e = Math.max(pa ?? 0, useState ? ps : 0);
+    score[s.id] = (score[s.id] || 0) * DECAY + Math.max(0, logit(e)) + bonus;
+    lastP[s.id] = Math.max(lastP[s.id] || 0, e);
     setStepP(s.id, lastP[s.id]);
-    if (a.p < DONE_P) continue;
-    anyStepSeen = true;
-    const list = (hits[s.id] ||= []);
-    const confirmed = a.p >= SURE_P || recentHit(list, idx, DONE_P);
-    list.push({ idx, p: a.p });
-    if (confirmed) {
-      const first = list.find(h => idx - h.idx <= CONFIRM_SPAN) || list[list.length - 1];
+    if (e >= 0.5) (hits[s.id] ||= []).push({ idx, p: e });
+    if (e >= DONE_P) anyStepSeen = true;
+    const need = s.id === nextId ? NEED_NEXT : NEED_OTHER;
+    if (score[s.id] >= need) {
+      const list = hits[s.id] || [];
+      const first = list.find(h => idx - h.idx <= 3) || { idx, p: e };
       doneMap[s.id] = true;
       doneAt[s.id] = first.idx;
-      setStepP(s.id, a.p);
+      setStepP(s.id, e);
       setStepClass(s.id, "done");
-      setEvidence(s.id, first.idx === idx ? "clip " + idx + ", " + a.p.toFixed(2) : "clips " + first.idx + "+" + idx + ", " + first.p.toFixed(2) + " and " + a.p.toFixed(2));
-      addEvent("done", s.id, [], a.p, ms);
-      log("clip " + idx + ": DONE " + s.name + " (p=" + a.p.toFixed(2) + ", " + ms + " ms)", "e-done");
+      setEvidence(s.id, first.idx === idx ? "clip " + idx + ", " + e.toFixed(2) : "clips " + first.idx + "-" + idx + ", up to " + Math.max(...list.filter(h => h.idx >= first.idx).map(h => h.p)).toFixed(2));
+      addEvent("done", s.id, [], e, ms);
+      log("clip " + idx + ": DONE " + s.name + " (evidence " + score[s.id].toFixed(2) + "/" + need + ", " + ms + " ms)", "e-done");
       announce("Step " + (steps.indexOf(s) + 1) + " done: " + s.name);
       sayStep(s.name + ", done.");
       Logo.done();
       Tracker.done();
       newlyDone.push(s);
-    } else {
+    } else if (e >= 0.5) {
       setStepClass(s.id, "checking");
-      setEvidence(s.id, "clip " + idx + ", " + a.p.toFixed(2) + ", checking again");
-      log("clip " + idx + ": maybe " + s.name + " (p=" + a.p.toFixed(2) + "), waiting for a second look");
+      setEvidence(s.id, "clip " + idx + ", " + e.toFixed(2) + ", checking again");
+      log("clip " + idx + ": maybe " + s.name + " (" + e.toFixed(2) + ", evidence " + score[s.id].toFixed(2) + "/" + need + ")");
     }
   }
   // Order: a step counted while an earlier one has not been seen at all.
@@ -958,7 +1038,7 @@ function applyWindow(idx, answers, ms, active) {
     const confirmed = a.p >= UNDO_SURE_P || recentHit(list, idx, UNDO_P);
     list.push({ idx, p: a.p });
     if (!confirmed) { log("clip " + idx + ": maybe undid " + s.name + " (p=" + a.p.toFixed(2) + ")"); continue; }
-    doneMap[s.id] = false; hits[s.id] = []; undoHits[s.id] = []; lastP[s.id] = 0;
+    doneMap[s.id] = false; hits[s.id] = []; undoHits[s.id] = []; lastP[s.id] = 0; score[s.id] = 0; stateSeen[s.id] = { low: true };
     setStepP(s.id, null);
     setStepClass(s.id, "undone");
     setEvidence(s.id, "undone in clip " + idx + ", " + a.p.toFixed(2));
@@ -1044,6 +1124,7 @@ function startRun() {
   clipIdx = 0; inflight = 0; doneMap = {}; alertedMissed = new Set(); lastExtraAt = -Infinity;
   events = []; latencies = []; lastP = {}; fullBlob = null;
   hits = {}; undoHits = {}; extraHits = []; clipStore = {}; results = {}; nextApply = 1; lastSentIdx = 0; absentRun = 0; doneAt = {};
+  score = {}; stateSeen = {}; surfaceRun = 0; releaseUsed = {};
   $("log").innerHTML = ""; $("clips").innerHTML = "";
   $("lat").textContent = "–"; $("latAvg").textContent = "–"; $("clipNo").textContent = "0"; $("inflight").textContent = "0";
   hideAlert();
@@ -1087,8 +1168,8 @@ async function stopRun() {
   drainResults(true);
   // No later window can confirm a step seen once near the end, so count it now.
   for (const s of steps) {
-    if (doneMap[s.id] || !(hits[s.id] || []).length) continue;
-    const h = hits[s.id][hits[s.id].length - 1];
+    if (doneMap[s.id] || !(hits[s.id] || []).some(h => h.p >= DONE_P)) continue;
+    const h = hits[s.id].filter(x => x.p >= DONE_P).pop();
     doneMap[s.id] = true;
     setStepClass(s.id, "done");
     setEvidence(s.id, "clip " + h.idx + ", " + h.p.toFixed(2) + ", seen once");
@@ -1171,6 +1252,28 @@ function setCalm(on) {
   Sky.setCalm(on);
 }
 
+// ---------- framing: warn when the work surface is out of view ----------
+const Framing = (() => {
+  let model = false, hands = false, shown = false;
+  function update() {
+    const on = model || hands;
+    $("frameNote").hidden = !on;
+    if (on && !shown) announce("Tilt the camera down so the table is in view.", true);
+    shown = on;
+  }
+  return { fromModel(v) { model = v; update(); }, fromHands(v) { hands = v; update(); } };
+})();
+
+// When hands stop moving or leave after working, check right away: that's when a step's result shows.
+function onHandsRelease() {
+  if (!running || releaseUsed[clipIdx] || performance.now() - clipStartAt < 1500) return;
+  releaseUsed[clipIdx] = true;
+  log("clip " + clipIdx + ": hands let go, checking now");
+  clearTimeout(clipTimer);
+  if (clipRec && clipRec.state === "recording") clipRec.stop();
+  startClip();
+}
+
 // ---------- logo: an eye that follows the cursor, blinks, and reacts to what the app sees ----------
 const Logo = (() => {
   const svg = $("logo"), iris = $("iris"), pupil = $("pupil");
@@ -1194,7 +1297,13 @@ const Logo = (() => {
 // nobody is identified: the box only says a person is in view.
 const Tracker = (() => {
   const cv = $("track"), ctx = cv.getContext("2d"), video = $("preview");
-  let pose = null, hands = null, on = true, loading = false, last = -1, frameNo = 0, slow = false;
+  let pose = null, hands = null, on = true, loading = false, frameNo = 0, nextAt = 0, ema = 0;
+  function autoOff() {
+    on = false; ctx.clearRect(0, 0, cv.width, cv.height);
+    $("trackBtn").setAttribute("aria-pressed", "false");
+    log("tracking switched off: this computer is too slow to run it alongside the checks");
+    announce("Tracking switched off to keep the app fast.");
+  }
   let face = null, trails = [[], []], pulses = [], handPts = [];
   const ARM = [[11, 13], [13, 15], [12, 14], [14, 16], [11, 12], [11, 23], [12, 24]];
   let HAND = [];
@@ -1246,12 +1355,18 @@ const Tracker = (() => {
     ctx.clearRect(0, 0, r.width, r.height);
     if (!on || !pose || !video.videoWidth || document.hidden) return;
     const t = performance.now();
-    if (t - last < 33) { draw(r); return; }            // about 30 detections a second at most
-    last = t; frameNo++;
+    // Budget: one model per pass (body, then hands), and wait about 3x as long as the last pass
+    // took, so tracking never starves the page. Too slow for long? Switch tracking off.
+    if (t < nextAt) { draw(r); return; }
+    frameNo++;
     const t0 = performance.now();
     let pr = null, hr = null;
-    try { pr = pose.detectForVideo(video, t); if (!slow || frameNo % 2) hr = hands.detectForVideo(video, t + 0.1); } catch (_) { return; }
-    slow = performance.now() - t0 > 40;
+    try { if (frameNo % 2) pr = pose.detectForVideo(video, t); else hr = hands.detectForVideo(video, t); } catch (_) { return; }
+    const took = performance.now() - t0;
+    ema = ema ? ema * 0.85 + took * 0.15 : took;
+    nextAt = performance.now() + Math.max(45, took * 3);
+    if (frameNo > 30 && ema > 220) { autoOff(); return; }
+    if (!pr) { if (hr) { handPts = (hr.landmarks || []).map(h => h.map(mapper(r))); handSignals(hr.landmarks || [], t); } draw(r); return; }
     const m = mapper(r);
     const lm = pr && pr.landmarks && pr.landmarks[0];
     if (lm) {
@@ -1271,8 +1386,25 @@ const Tracker = (() => {
       tick.arms = ARM.filter(([a, b]) => (lm[a].visibility ?? 1) > 0.5 && (lm[b].visibility ?? 1) > 0.5).map(([a, b]) => [m(lm[a]), m(lm[b])]);
       tick.joints = [11, 12, 13, 14, 15, 16].filter(i => (lm[i].visibility ?? 1) > 0.5).map(i => m(lm[i]));
     } else { face = null; trails = [[], []]; tick.arms = []; tick.joints = []; }
-    if (hr) handPts = (hr.landmarks || []).map(h => h.map(m));
     draw(r);
+  }
+  // hands near the bottom edge most of the time means the table is cut off;
+  // fast hands that go still (or leave) mean something was just set down
+  let edge = [], lastPalm = null, lastMoveAt = 0, wasMoving = false, handsSince = 0;
+  function handSignals(hl, t) {
+    if (typeof motionClip !== "undefined" && motionClip && hl.length) motionClip.hands++;
+    const low = hl.some(h => h[0].y > 0.9 || h.some(p => p.y > 0.98));
+    edge.push(hl.length ? low : null); if (edge.length > 90) edge.shift();
+    const seen = edge.filter(v => v !== null);
+    Framing.fromHands(seen.length > 20 && seen.filter(Boolean).length / seen.length > 0.5);
+    const palm = hl[0] ? hl[0][9] : null;
+    if (palm && lastPalm) {
+      const v = Math.hypot(palm.x - lastPalm.x, palm.y - lastPalm.y) / Math.max(1, t - (tick.lt || t)) * 1000;
+      if (v > 0.25) { lastMoveAt = t; wasMoving = true; }
+      else if (wasMoving && t - lastMoveAt > 500) { wasMoving = false; onHandsRelease(); }
+    }
+    if (!palm && lastPalm && wasMoving) { wasMoving = false; onHandsRelease(); }
+    lastPalm = palm; tick.lt = t;
   }
   function draw(r) {
     const col = accent(), calm = still();
@@ -1421,6 +1553,11 @@ $("themeBtn").onclick = () => {
 showThemePref();
 addEventListener("themechange", () => { try { Sky.recolor(); } catch (_) {} });
 $("toWatch").onclick = () => setTab("watch");
+function setMenu(open) { $("setMenu").hidden = !open; $("setBtn").setAttribute("aria-expanded", String(open)); }
+$("setBtn").onclick = (e) => { e.stopPropagation(); setMenu($("setMenu").hidden); };
+$("setMenu").addEventListener("click", (e) => e.stopPropagation());
+document.addEventListener("click", () => setMenu(false));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("setMenu").hidden) { setMenu(false); $("setBtn").focus(); } });
 $("trackBtn").onclick = () => {
   const v = $("trackBtn").getAttribute("aria-pressed") !== "true";
   $("trackBtn").setAttribute("aria-pressed", String(v));

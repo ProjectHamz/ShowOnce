@@ -137,6 +137,18 @@ function checkQuestions(steps, doneSteps, allSteps) {
       },
     };
   }
+  // State questions: is the step's end state true right now? A flip from no to yes counts as
+  // evidence even when the action itself was missed (object state change, as in Fathi and Rehg).
+  for (const s of steps) {
+    questions["state_" + s.id] = {
+      type: "noul",
+      instructions: `Look at the last moments of the video. Is this true right now: ${s.done_when}? Small items count if any part is visibly in place.`,
+      criteria: {
+        true_description: `At the end of the video this is visibly true: ${s.done_when}`,
+        false_description: `At the end of the video this is not true, or it can't be seen.`,
+      },
+    };
+  }
   for (const s of doneSteps) {
     questions["undo_" + s.id] = {
       type: "noul",
@@ -155,6 +167,11 @@ function checkQuestions(steps, doneSteps, allSteps) {
       true_description: "A deliberate action with an object that belongs to none of the listed steps (for example adding an item that is not in the procedure).",
       false_description: "Only listed steps, preparation for them, idle movement, or nothing happens.",
     },
+  };
+  questions.surface = {
+    type: "noul",
+    instructions: "Is the table or work surface where the person sets things down clearly visible in the video?",
+    criteria: { true_description: "The surface where items are placed is in view.", false_description: "The surface is cut off, out of frame, or hidden." },
   };
   questions.present = {
     type: "noul",
